@@ -37,7 +37,7 @@ export const StoreTestingReviewerHub: React.FC<StoreTestingReviewerHubProps> = (
   onOpenAccountDeletion
 }) => {
   const { setActiveRole } = useTuxi();
-  const [activeTab, setActiveTab] = useState<'personas' | 'compliance_audit' | 'guidelines'>('compliance_audit');
+  const [activeTab, setActiveTab] = useState<'screenshots' | 'personas' | 'compliance_audit' | 'guidelines'>('screenshots');
 
   if (!isOpen) return null;
 
@@ -69,20 +69,31 @@ export const StoreTestingReviewerHub: React.FC<StoreTestingReviewerHubProps> = (
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-100 bg-slate-50 text-xs font-semibold shrink-0">
+        <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-100 bg-slate-50 text-xs font-semibold shrink-0 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('screenshots')}
+            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'screenshots'
+                ? 'border-indigo-600 text-indigo-600 font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Play Store Screenshots (8) &amp; ZIP</span>
+          </button>
           <button
             onClick={() => setActiveTab('compliance_audit')}
-            className={`px-3 py-2 border-b-2 transition-colors ${
+            className={`px-3 py-2 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'compliance_audit'
                 ? 'border-indigo-600 text-indigo-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            Store Compliance Matrix (3 Stores)
+            Store Compliance Matrix
           </button>
           <button
             onClick={() => setActiveTab('personas')}
-            className={`px-3 py-2 border-b-2 transition-colors ${
+            className={`px-3 py-2 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'personas'
                 ? 'border-indigo-600 text-indigo-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -92,18 +103,131 @@ export const StoreTestingReviewerHub: React.FC<StoreTestingReviewerHubProps> = (
           </button>
           <button
             onClick={() => setActiveTab('guidelines')}
-            className={`px-3 py-2 border-b-2 transition-colors ${
+            className={`px-3 py-2 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'guidelines'
                 ? 'border-indigo-600 text-indigo-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            Store Documentation &amp; Policies
+            Store Policies
           </button>
         </div>
 
         {/* Body Content */}
         <div className="p-6 overflow-y-auto space-y-6 text-slate-700">
+          
+          {/* TAB 0: SCREENSHOTS & STORE VISUAL ASSETS */}
+          {activeTab === 'screenshots' && (
+            <div className="space-y-6">
+              {/* Main Download Banner */}
+              <div className="p-5 bg-gradient-to-r from-indigo-900 via-slate-900 to-sky-950 text-white rounded-2xl shadow-lg border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500 text-white">
+                      READY TO UPLOAD
+                    </span>
+                    <span className="text-slate-300 text-xs font-mono">1080 × 1920 px (9:16 Aspect Ratio)</span>
+                  </div>
+                  <h3 className="text-base font-bold text-white">Download All 8 Screenshots &amp; Store Graphics</h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Live captures from the TUXI app ready for immediate upload to Google Play Console.
+                  </p>
+                </div>
+                <a
+                  href="/api/download-all-screenshots"
+                  download="tuxi-google-play-screenshots.zip"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-100" />
+                  <span>Download All (.ZIP) to Computer</span>
+                </a>
+              </div>
+
+              {/* 8 Screenshots Grid */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-sky-600" />
+                    <span>8 Phone Screenshots (Google Play Console)</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-500">Click any image or button to download PNG directly</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                  {[
+                    { id: 1, title: '1. Food Delivery & Eats', desc: 'Local restaurants & ordering' },
+                    { id: 2, title: '2. Shop Marketplace', desc: 'Verified vendors & catalog' },
+                    { id: 3, title: '3. Courier & Parcel', desc: 'Door-to-door dispatch' },
+                    { id: 4, title: '4. Live GPS Tracking', desc: 'Interactive driver route' },
+                    { id: 5, title: '5. Multi-Currency Wallet', desc: 'Secure payment methods' },
+                    { id: 6, title: '6. Driver Cockpit', desc: 'Job offers & navigation' },
+                    { id: 7, title: '7. Restaurant Portal', desc: 'Kitchen order management' },
+                    { id: 8, title: '8. Sales Rep Portal', desc: 'Business onboarding hub' }
+                  ].map((item) => (
+                    <div key={item.id} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 flex flex-col group hover:border-indigo-400 transition-all shadow-xs">
+                      <div className="relative aspect-[9/16] bg-slate-900 overflow-hidden">
+                        <img 
+                          src={`/screenshot-phone-${item.id}.png`} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-xs text-white px-2 py-0.5 rounded text-[9px] font-bold">
+                          #{item.id}
+                        </div>
+                      </div>
+                      <div className="p-2.5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="font-bold text-[11px] text-slate-900 line-clamp-1">{item.title}</div>
+                          <div className="text-[10px] text-slate-500 line-clamp-1">{item.desc}</div>
+                        </div>
+                        <a
+                          href={`/api/download-screenshot/${item.id}`}
+                          download={`tuxi-screenshot-${item.id}.png`}
+                          className="mt-2 w-full py-1.5 px-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white rounded-lg text-[10px] font-bold text-center transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>Download PNG</span>
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extra Assets: Feature Graphic & App Icon */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <h4 className="font-bold text-xs text-slate-900">Additional Required Google Play Visual Assets</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">Feature Graphic (1,024 × 500 px)</div>
+                      <div className="text-[10px] text-slate-500">Banner displayed at top of Play Store listing</div>
+                    </div>
+                    <a
+                      href="/feature-graphic.png"
+                      download="tuxi-feature-graphic.png"
+                      className="px-3 py-1.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-lg text-[10px] font-bold transition-colors"
+                    >
+                      Download
+                    </a>
+                  </div>
+
+                  <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">App Icon (512 × 512 px PNG)</div>
+                      <div className="text-[10px] text-slate-500">High-res store icon conforming to guidelines</div>
+                    </div>
+                    <a
+                      href="/pwa-512x512.png"
+                      download="tuxi-icon-512x512.png"
+                      className="px-3 py-1.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-lg text-[10px] font-bold transition-colors"
+                    >
+                      Download
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* TAB 1: COMPLIANCE AUDIT MATRIX */}
           {activeTab === 'compliance_audit' && (

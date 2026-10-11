@@ -10,6 +10,7 @@ import {
 import { InteractiveMap } from '../common/InteractiveMap';
 import { AIInsightsDashboard } from './AIInsightsDashboard';
 import { AIPersonalizedTipsCarousel } from './AIPersonalizedTipsCarousel';
+import { IntegrationsManagementConsole } from './IntegrationsManagementConsole';
 import { 
   ShieldAlert, 
   Sliders, 
@@ -41,7 +42,8 @@ import {
   Navigation,
   MapPin,
   TrendingUp,
-  Clock
+  Clock,
+  Server
 } from 'lucide-react';
 
 export const AdminAICommandCenter: React.FC = () => {
@@ -63,7 +65,7 @@ export const AdminAICommandCenter: React.FC = () => {
     formatPrice
   } = useTuxi();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'global_launch' | 'monetization' | 'exceptions' | 'territories' | 'review' | 'finance' | 'ai_logs' | 'ai_insights' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'global_launch' | 'monetization' | 'exceptions' | 'territories' | 'review' | 'finance' | 'integrations' | 'ai_logs' | 'ai_insights' | 'settings'>('overview');
   
   // Exception handling state
   const [selectedException, setSelectedException] = useState<AIExceptionItem | null>(null);
@@ -243,6 +245,18 @@ export const AdminAICommandCenter: React.FC = () => {
           }`}
         >
           Finance &amp; Royalties
+        </button>
+        <button
+          onClick={() => setActiveTab('integrations')}
+          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'integrations' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Server className="w-3.5 h-3.5 text-indigo-600" />
+          <span>External Integrations</span>
+          <span className="bg-emerald-600 text-white text-[9px] font-mono px-1 rounded font-bold">
+            2G
+          </span>
         </button>
         <button
           onClick={() => setActiveTab('ai_insights')}
@@ -1239,6 +1253,11 @@ export const AdminAICommandCenter: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB: EXTERNAL INTEGRATIONS & RELEASE READINESS (PHASE 2G) */}
+      {activeTab === 'integrations' && (
+        <IntegrationsManagementConsole />
       )}
 
       {/* TAB 6: AI AUDIT TRAIL (Brief Section 6) */}

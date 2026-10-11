@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { ApiClient } from '../services/apiClient.js';
 import {
   UserRole,
   Business,
+  ProductItem,
   Order,
   Driver,
   Rep,
@@ -151,6 +153,13 @@ interface TuxiContextType {
   removeGroupMember: (memberId: string) => void;
   updateSplitMode: (mode: SplitPaymentMode) => void;
   cancelGroupOrder: () => void;
+
+  // Authenticated User Identity (Phase 2A)
+  currentUser: any | null;
+  setCurrentUser: (u: any | null) => void;
+  logout: () => Promise<void>;
+  refreshEatsBusinesses: () => Promise<void>;
+  refreshOrders: () => Promise<void>;
 }
 
 const DEFAULT_MONETIZATION: PlatformMonetizationSettings = {
@@ -767,7 +776,16 @@ const INITIAL_LOYALTY: LoyaltyProfile = {
 const TuxiContext = createContext<TuxiContextType | undefined>(undefined);
 
 export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeRole, setActiveRole] = useState<UserRole>('customer');
+  const [activeRole, setActiveRole] = useState<UserRole>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const r = params.get('role');
+      if (r && ['customer', 'rep', 'eats_owner', 'shop_owner', 'driver'].includes(r)) {
+        return r as UserRole;
+      }
+    }
+    return 'customer';
+  });
   const [isMobileRepView, setIsMobileRepView] = useState<boolean>(false);
 
   // Global Theme Mode (Dark / Light) with session persistence
@@ -897,6 +915,214 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const saved = localStorage.getItem('tuxi_loyalty');
     return saved ? JSON.parse(saved) : INITIAL_LOYALTY;
   });
+
+  // Authenticated User Identity (Phase 2A)
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+
+  const refreshEatsBusinesses = async () => {
+    try {
+      const pgBusinesses = await ApiClient.getEatsBusinesses();
+      if (pgBusinesses && Array.isArray(pgBusinesses) && pgBusinesses.length > 0) {
+        setBusinesses(prev => {
+          const nonEats = prev.filter(b => b.type !== 'eats');
+          const mappedEats: Business[] = pgBusinesses.map(pb => ({
+            id: pb.id,
+            type: 'eats' as const,
+            name: pb.name,
+            ownerName: 'Verified Partner',
+            ownerEmail: 'orders@tuxi.co.za',
+            ownerPhone: '+27214240001',
+            address: `${pb.address?.streetLine1 || 'Kloof St'}, ${pb.address?.city || 'Cape Town'}`,
+            location: { lat: pb.address?.latitude || -33.9300, lng: pb.address?.longitude || 18.4200 },
+            city: pb.address?.city || 'Cape Town',
+            country: 'South Africa',
+            repId: 'rep-01',
+            repName: 'Marcus Rivera',
+            status: 'live' as const,
+            category: (pb.cuisineTypes && pb.cuisineTypes.length > 0) ? pb.cuisineTypes.join(' & ') : 'Gourmet Cuisine',
+            rating: 4.9,
+            reviewCount: 142,
+            openingHours: '11:00 - 22:00',
+            prepTimeMinutes: pb.prepTimeMinutes || 25,
+            bannerImage: pb.bannerUrl || pb.imageUrl || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+            commissionRate: 20,
+            eatsPlan: 'plus' as const,
+            salesVolumeYtd: 38400,
+            activeOrderCount: 0,
+            consentObtained: true,
+            createdAt: '2026-01-15',
+            updatedAt: '2026-03-01',
+            documents: [],
+            menuItems: []
+          }));
+          return [...mappedEats, ...nonEats];
+        });
+      }
+    } catch (err) {
+      console.warn('[Eats Refresh Error]', err);
+    }
+  };
+
+  const refreshShopBusinesses = async () => {
+    try {
+      const pgShops = await ApiClient.getShopBusinesses();
+      if (pgShops && Array.isArray(pgShops) && pgShops.length > 0) {
+        // Fetch products for each shop concurrently
+        const shopWithProducts = await Promise.all(pgShops.map(async (ps) => {
+          let prods: any[] = [];
+          try {
+            const pRes = await ApiClient.getShopProducts(ps.id);
+            prods = pRes.products || [];
+          } catch {
+            prods = [];
+          }
+
+          const mappedProducts: ProductItem[] = prods.map(p => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: (p.effectivePriceCents || p.priceCents) / 100,
+            description: p.description,
+            imageUrl: p.imageUrl || 'https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&w=500&q=80',
+            stock: p.stockAvailable || 0,
+            stockCount: p.stockAvailable || 0,
+            isAvailable: Boolean(p.isAvailable && p.stockAvailable > 0),
+            inStock: Boolean(p.isAvailable && p.stockAvailable > 0),
+            sku: p.sku,
+            isOnSale: p.isOnSale,
+            salePrice: p.salePriceCents ? p.salePriceCents / 100 : undefined,
+            variants: p.variants?.map((v: any) => ({
+              id: v.id,
+              name: v.variantName,
+              sku: v.variantSku,
+              price: ((p.effectivePriceCents || p.priceCents) + (v.priceDeltaCents || 0)) / 100,
+              priceDelta: (v.priceDeltaCents || 0) / 100,
+              stock: v.stockAvailable || 0,
+              stockCount: v.stockAvailable || 0,
+              attributes: v.attributes,
+              inStock: Boolean(v.isAvailable && v.stockAvailable > 0)
+            })) || []
+          }));
+
+          return {
+            id: ps.id,
+            type: 'shop' as const,
+            name: ps.name,
+            ownerName: 'Verified Retail Partner',
+            ownerEmail: 'retail@tuxi.co.za',
+            ownerPhone: '+27214241122',
+            address: `${ps.address?.streetLine1 || 'Kloof St'}, ${ps.address?.city || 'Cape Town'}`,
+            location: { lat: ps.address?.latitude || -33.9310, lng: ps.address?.longitude || 18.4190 },
+            city: ps.address?.city || 'Cape Town',
+            country: 'South Africa',
+            repId: 'rep-01',
+            repName: 'Marcus Rivera',
+            status: 'live' as const,
+            category: ps.category || 'Retail & Goods',
+            rating: 4.8,
+            reviewCount: 96,
+            openingHours: '08:00 - 20:00',
+            prepTimeMinutes: 30,
+            bannerImage: ps.bannerUrl || ps.imageUrl || 'https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&w=1200&q=80',
+            commissionRate: 15,
+            salesVolumeYtd: 42100,
+            activeOrderCount: 0,
+            consentObtained: true,
+            createdAt: '2026-01-15',
+            updatedAt: '2026-03-01',
+            documents: [],
+            menuItems: [],
+            products: mappedProducts
+          } as Business;
+        }));
+
+        setBusinesses(prev => {
+          const nonShops = prev.filter(b => b.type !== 'shop');
+          return [...nonShops, ...shopWithProducts];
+        });
+      }
+    } catch (err) {
+      console.warn('[Shop Refresh Error]', err);
+    }
+  };
+
+  const refreshOrders = async () => {
+    try {
+      const token = ApiClient.getToken();
+      if (token) {
+        const pgOrders = await ApiClient.getOrders();
+        if (pgOrders && Array.isArray(pgOrders) && pgOrders.length > 0) {
+          setOrders(prev => {
+            const mappedPgOrders: Order[] = pgOrders.map(po => ({
+              id: po.id,
+              orderNumber: po.orderNumber,
+              type: 'eats' as const,
+              businessId: po.businessId,
+              businessName: po.businessName,
+              businessCoords: { lat: -33.9300, lng: 18.4200 },
+              customerAddress: 'Saved Delivery Address',
+              customerCoords: { lat: -33.9249, lng: 18.4241 },
+              customerId: po.customerId || 'cust-pg',
+              customerName: 'Customer',
+              customerPhone: '+27821234567',
+              items: po.items?.map((i: any) => ({
+                id: `item-${Date.now()}-${Math.random()}`,
+                name: i.name,
+                price: (i.unitPriceCents || 0) / 100,
+                quantity: i.quantity
+              })) || [],
+              subtotal: (po.subtotalCents || 0) / 100,
+              tip: (po.tipCents || 0) / 100,
+              deliveryFee: 25.0,
+              serviceFee: 1.5,
+              total: (po.totalCents || 0) / 100,
+              status: (po.status?.toLowerCase() || 'placed') as any,
+              createdAt: po.createdAt,
+              estimatedDeliveryTime: '30-40 min',
+              isPickupOrder: false
+            }));
+
+            const existingIds = new Set(mappedPgOrders.map(o => o.id));
+            const remainingLocal = prev.filter(o => !existingIds.has(o.id));
+            return [...mappedPgOrders, ...remainingLocal];
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[Orders Refresh Error]', err);
+    }
+  };
+
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        const token = ApiClient.getToken();
+        if (token) {
+          const me = await ApiClient.getMe();
+          if (me && me.user) {
+            setCurrentUser(me.user);
+          }
+        }
+      } catch (err) {
+        console.warn('[Session Init]', err);
+      }
+      await refreshEatsBusinesses();
+      await refreshShopBusinesses();
+    };
+
+    initData();
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      refreshOrders();
+    }
+  }, [currentUser]);
+
+  const logout = async () => {
+    await ApiClient.logout();
+    setCurrentUser(null);
+  };
 
   // Cart state
   const [cart, setCart] = useState<OrderCartItem[]>([]);
@@ -1483,11 +1709,12 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const placeOrder = (newOrderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>): Order => {
     const orderNumber = `TX-${Math.floor(1000 + Math.random() * 9000)}`;
+    const tempId = `ord-${Date.now()}`;
     const selectedPm = paymentMethods.find(p => p.id === selectedPaymentMethodId) || paymentMethods[0];
 
     const newOrder: Order = {
       ...newOrderData,
-      id: `ord-${Date.now()}`,
+      id: tempId,
       orderNumber,
       status: 'placed',
       paymentMethod: selectedPm,
@@ -1497,6 +1724,41 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setOrders(prev => [newOrder, ...prev]);
     clearCart();
+
+    // Asynchronously persist to PostgreSQL backend
+    if (newOrderData.businessId && newOrderData.items && newOrderData.items.length > 0) {
+      ApiClient.createOrder({
+        businessId: newOrderData.businessId,
+        items: newOrderData.items.map((i: any) => ({
+          itemType: (newOrderData.type === 'shop' || i.variantId) ? 'PRODUCT' : 'MENU_ITEM',
+          itemId: i.itemId || i.id,
+          variantId: i.variantId,
+          quantity: i.quantity || 1
+        })),
+        deliveryAddress: {
+          streetLine1: newOrderData.customerAddress || '15 Long St',
+          city: 'Cape Town',
+          postalCode: '8001',
+          countryCode: 'ZAF',
+          latitude: newOrderData.customerCoords?.lat || -33.9249,
+          longitude: newOrderData.customerCoords?.lng || 18.4241
+        },
+        tipCents: Math.round((newOrderData.tip || 0) * 100),
+        idempotencyKey: `idem-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+        isTestPayment: true
+      }).then(realOrder => {
+        setOrders(prev => prev.map(o => o.id === tempId ? {
+          ...o,
+          id: realOrder.orderId,
+          orderNumber: realOrder.orderNumber,
+          subtotal: realOrder.subtotalCents / 100,
+          total: realOrder.totalCents / 100,
+          status: realOrder.status?.toLowerCase() || 'placed'
+        } : o));
+      }).catch(err => {
+        console.warn('[PostgreSQL Order Persistence Error]', err.message);
+      });
+    }
 
     // Award loyalty points (10 points per currency unit spent * tier multiplier)
     const pointsEarned = Math.round(newOrder.total * 10 * loyaltyProfile.multiplier);
@@ -1919,6 +2181,11 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <TuxiContext.Provider
       value={{
+        currentUser,
+        setCurrentUser,
+        logout,
+        refreshEatsBusinesses,
+        refreshOrders,
         activeRole,
         setActiveRole,
         theme,

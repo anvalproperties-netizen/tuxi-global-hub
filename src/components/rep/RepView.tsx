@@ -1055,9 +1055,9 @@ export const RepView: React.FC = () => {
               </span>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Exclusivity Policy</span>
+              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Exclusivity &amp; Attribution</span>
               <span className="font-semibold text-slate-800">
-                First-to-onboard secures lifetime 1.5% GMV commission on valid non-disputed stores.
+                TUXI Reps can earn up to 3% commission on qualifying sales made through TUXI by TUXI Eats restaurants or TUXI Shop stores they successfully signed up, subject to the TUXI Rep Terms &amp; Conditions.
               </span>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -1074,9 +1074,9 @@ export const RepView: React.FC = () => {
       {activeTab === 'commissions' && (
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-6">
           <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-base font-bold text-slate-900">Rep Payout & Commission Breakdown</h2>
+            <h2 className="text-base font-bold text-slate-900">Rep Payout &amp; Commission Breakdown</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Transparent earnings model: £150 instant acquisition bounty per approved store + 1.5% ongoing GMV revenue share.
+              TUXI Reps can earn up to 3% commission on qualifying sales made through TUXI by TUXI Eats restaurants or TUXI Shop stores they successfully signed up, subject to the TUXI Rep Terms &amp; Conditions.
             </p>
           </div>
 
@@ -1098,7 +1098,7 @@ export const RepView: React.FC = () => {
             </div>
 
             <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl">
-              <div className="text-xs text-emerald-700 font-medium">Monthly Recurring GMV Cut (1.5%)</div>
+              <div className="text-xs text-emerald-700 font-medium">Qualifying Sales Commission (Up to 3%)</div>
               <div className="text-2xl font-black text-emerald-900 tabular-nums mt-1">
                 {config.currencySymbol}1,240.00 / mo
               </div>

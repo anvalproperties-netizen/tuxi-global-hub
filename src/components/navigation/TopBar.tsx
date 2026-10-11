@@ -197,18 +197,23 @@ export const TopBar: React.FC = () => {
 
             {/* Zone 3: Role Switcher (Compact below XL, full pills on XL+) */}
             <div className="flex xl:hidden items-center shrink-0">
-              <select
-                value={activeRole}
-                onChange={e => setActiveRole(e.target.value as UserRole)}
-                aria-label="Switch Role View"
-                className="text-xs font-bold py-1 px-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none"
-              >
-                {roles.map(r => (
-                  <option key={r.role} value={r.role}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 px-2 py-1 rounded-lg">
+                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                  Role:
+                </span>
+                <select
+                  value={activeRole}
+                  onChange={e => setActiveRole(e.target.value as UserRole)}
+                  aria-label="Switch Role View"
+                  className="text-xs font-bold bg-transparent text-indigo-950 dark:text-indigo-100 focus:outline-none cursor-pointer"
+                >
+                  {roles.map(r => (
+                    <option key={r.role} value={r.role} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <nav className="hidden xl:flex items-center p-1 bg-slate-100 dark:bg-slate-800/90 rounded-lg overflow-x-auto max-w-xl scrollbar-none transition-colors">
@@ -333,13 +338,13 @@ export const TopBar: React.FC = () => {
       >
         <button
           onClick={() => setIsStoreTestingOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-2xl border-2 border-indigo-400/80 hover:scale-105 active:scale-95 transition-all cursor-pointer group ring-4 ring-indigo-500/20"
-          title="Open Store QA Reviewer Sandbox"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-indigo-900 to-slate-900 hover:from-indigo-800 hover:to-slate-800 text-white font-bold text-xs shadow-2xl border-2 border-indigo-400/80 hover:scale-105 active:scale-95 transition-all cursor-pointer group ring-4 ring-indigo-500/20"
+          title="Open Screenshots & Store Assets Hub"
         >
           <div className="p-1 rounded-full bg-indigo-600 text-cyan-300">
             <Smartphone className="w-4 h-4 animate-bounce" />
           </div>
-          <span className="tracking-wide">Store QA Hub</span>
+          <span className="tracking-wide">📸 8 Screenshots &amp; ZIP</span>
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block" />
         </button>
       </aside>

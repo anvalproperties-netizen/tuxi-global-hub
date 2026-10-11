@@ -41,9 +41,13 @@ export interface ProductVariant {
   id: string;
   name: string;
   price: number;
+  priceDelta?: number;
   salePrice?: number;
   stock: number;
+  stockCount?: number;
+  inStock?: boolean;
   sku: string;
+  attributes?: Record<string, any>;
 }
 
 export interface ProductItem {
@@ -53,10 +57,13 @@ export interface ProductItem {
   description: string;
   price: number;
   salePrice?: number;
+  isOnSale?: boolean;
   sku: string;
   barcode?: string;
   stock: number;
+  stockCount?: number;
   isAvailable: boolean;
+  inStock?: boolean;
   variants?: ProductVariant[];
   imageUrl?: string;
   posSyncedId?: string;
@@ -153,6 +160,8 @@ export type OrderStatus =
 export interface OrderCartItem {
   id: string;
   itemId: string;
+  variantId?: string;
+  sku?: string;
   name: string;
   price: number;
   quantity: number;

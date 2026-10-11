@@ -125,10 +125,20 @@ export const CustomerView: React.FC = () => {
     groupOrderSession,
     startGroupOrder,
     aiLocationStatus,
-    triggerAILocationDetection
+    triggerAILocationDetection,
+    setActiveRole
   } = useTuxi();
 
-  const [activeTab, setActiveTab] = useState<'eats' | 'shop' | 'courier' | 'tracking' | 'payments'>('eats');
+  const [activeTab, setActiveTab] = useState<'eats' | 'shop' | 'courier' | 'tracking' | 'payments'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab && ['eats', 'shop', 'courier', 'tracking', 'payments'].includes(tab)) {
+        return tab as any;
+      }
+    }
+    return 'eats';
+  });
   const [showAILocationModal, setShowAILocationModal] = useState<boolean>(false);
   const [showGroupOrderModal, setShowGroupOrderModal] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -136,6 +146,8 @@ export const CustomerView: React.FC = () => {
 
   // Modal item customization for Eats
   const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
+  // Selected product variant state map (productId -> variantId)
+  const [selectedVariantByProd, setSelectedVariantByProd] = useState<Record<string, string>>({});
   const [selectedModifiers, setSelectedModifiers] = useState<string[]>([]);
 
   // Checkout modal
@@ -266,12 +278,26 @@ export const CustomerView: React.FC = () => {
 
   const grandTotal = subtotal + deliveryFee + serviceFee + groceryCustomerFee;
 
-  const handleAddItemToCart = (item: MenuItem | ProductItem, biz: Business) => {
+  const handleAddItemToCart = (item: MenuItem | ProductItem, biz: Business, selectedVariant?: any) => {
+    let finalPrice = item.price;
+    let displayName = item.name;
+    let variantSku = (item as ProductItem).sku;
+    let variantId = undefined;
+
+    if (selectedVariant) {
+      variantId = selectedVariant.id;
+      finalPrice = item.price + (selectedVariant.priceDelta || 0);
+      displayName = `${item.name} (${selectedVariant.name})`;
+      variantSku = selectedVariant.sku || variantSku;
+    }
+
     const cartItem: OrderCartItem = {
       id: `cart-${Date.now()}-${Math.random()}`,
       itemId: item.id,
-      name: item.name,
-      price: item.price,
+      variantId,
+      sku: variantSku,
+      name: displayName,
+      price: finalPrice,
       quantity: 1,
       selectedOptions: selectedModifiers.length > 0 ? selectedModifiers : undefined
     };
@@ -524,6 +550,19 @@ export const CustomerView: React.FC = () => {
           >
             <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
             <span>{t('payments', 'Payment Methods')}</span>
+          </button>
+
+          {/* TUXI Rep Direct Access Button */}
+          <button
+            onClick={() => setActiveRole('rep')}
+            className="px-3.5 py-2 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-xs ml-auto"
+            title="Open TUXI Rep Portal (Field Sales & Merchant Onboarding)"
+          >
+            <Users className="w-3.5 h-3.5 text-cyan-200" />
+            <span>💼 TUXI Rep</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] bg-white/20 font-mono font-bold text-cyan-200 uppercase">
+              PORTAL
+            </span>
           </button>
         </div>
 
@@ -1058,46 +1097,101 @@ export const CustomerView: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {selectedBusiness.products?.map(prod => (
-                  <div key={prod.id} className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-slate-900">{prod.name}</span>
-                        <span className="text-[10px] font-mono text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                          {prod.stock} in stock
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">{prod.description}</p>
-                      <span className="text-[10px] font-mono text-slate-400 block mt-1">SKU: {prod.sku}</span>
-                    </div>
+                {selectedBusiness.products?.map(prod => {
+                  const hasVariants = prod.variants && prod.variants.length > 0;
+                  const currentVariantId = selectedVariantByProd[prod.id] || (hasVariants ? prod.variants![0].id : '');
+                  const currentVariant = hasVariants ? prod.variants!.find(v => v.id === currentVariantId) || prod.variants![0] : null;
 
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                      <div className="text-sm font-bold text-slate-900 tabular-nums">
-                        {formatPrice(prod.price)}
+                  const effectivePrice = currentVariant 
+                    ? prod.price + (currentVariant.priceDelta || 0)
+                    : prod.price;
+                  const effectiveStock = (currentVariant ? (currentVariant.stockCount ?? currentVariant.stock) : (prod.stockCount ?? prod.stock)) ?? 0;
+                  const isAvailable = Boolean(currentVariant ? currentVariant.inStock : prod.inStock);
+
+                  return (
+                    <div key={prod.id} className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-slate-900">{prod.name}</span>
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
+                            isAvailable && effectiveStock > 0 
+                              ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' 
+                              : 'text-rose-700 bg-rose-50 border border-rose-200'
+                          }`}>
+                            {isAvailable && effectiveStock > 0 ? `${effectiveStock} in stock` : 'Out of Stock'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{prod.description}</p>
+                        
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-[10px] font-mono text-slate-400">
+                            SKU: {currentVariant?.sku || prod.sku}
+                          </span>
+                          {prod.isOnSale && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-rose-500 text-white rounded">
+                              ON SALE
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Product Variant Selector */}
+                        {hasVariants && (
+                          <div className="mt-3">
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                              Select Variant:
+                            </label>
+                            <select
+                              value={currentVariantId}
+                              onChange={(e) => setSelectedVariantByProd(prev => ({ ...prev, [prod.id]: e.target.value }))}
+                              className="w-full text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                            >
+                              {prod.variants!.map(v => {
+                                const vStock = (v.stockCount ?? v.stock ?? 0);
+                                const vDelta = (v.priceDelta ?? 0);
+                                return (
+                                  <option key={v.id} value={v.id} disabled={!v.inStock || vStock <= 0}>
+                                    {v.name} {vDelta !== 0 ? `(${vDelta > 0 ? '+' : ''}${formatPrice(vDelta)})` : ''} {!v.inStock || vStock <= 0 ? '(Sold Out)' : `[${vStock} left]`}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setArPreviewItem({ item: prod, businessName: selectedBusiness.name });
-                            recordViewedItem(prod, selectedBusiness);
-                          }}
-                          className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors"
-                          title="Preview in 3D AR using Camera"
-                        >
-                          <Scan className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>3D AR</span>
-                        </button>
-                        <button
-                          onClick={() => handleAddItemToCart(prod, selectedBusiness)}
-                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add</span>
-                        </button>
+
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <div className="text-sm font-bold text-slate-900 tabular-nums">
+                          {formatPrice(effectivePrice)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setArPreviewItem({ item: prod, businessName: selectedBusiness.name });
+                              recordViewedItem(prod, selectedBusiness);
+                            }}
+                            className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors"
+                            title="Preview in 3D AR using Camera"
+                          >
+                            <Scan className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>3D AR</span>
+                          </button>
+                          <button
+                            onClick={() => handleAddItemToCart(prod, selectedBusiness, currentVariant)}
+                            disabled={!isAvailable || effectiveStock <= 0}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors ${
+                              isAvailable && effectiveStock > 0
+                                ? 'bg-slate-900 hover:bg-slate-800 text-white cursor-pointer'
+                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            }`}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>{isAvailable && effectiveStock > 0 ? 'Add' : 'Sold Out'}</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
