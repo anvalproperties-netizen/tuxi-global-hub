@@ -5,60 +5,21 @@ const { Pool } = pg;
 export class PostgresAdapter {
   private static instance: PostgresAdapter;
   public pool: pg.Pool;
-  private isFallbackMode: boolean = false;
 
   private constructor() {
-    if (!process.env.SQL_HOST) {
-      this.isFallbackMode = true;
-      console.warn('[PostgreSQL Adapter] SQL_HOST not configured — using in-memory mock fallback adapter.');
-    }
-
     this.pool = new Pool({
-      host: process.env.SQL_HOST || '127.0.0.1',
+      host: process.env.SQL_HOST,
       user: process.env.SQL_USER,
       password: process.env.SQL_PASSWORD,
       database: process.env.SQL_DB_NAME,
       max: 15,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 10000,
     });
 
     this.pool.on('error', (err) => {
-      console.warn('[PostgreSQL Pool Warning]', err.message);
+      console.error('[PostgreSQL Pool Error]', err);
     });
-
-    const originalConnect = this.pool.connect.bind(this.pool);
-    const originalQuery = this.pool.query.bind(this.pool);
-
-    this.pool.connect = (async (...args: any[]) => {
-      if (this.isFallbackMode) {
-        return {
-          query: async () => ({ rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] }),
-          release: () => {},
-        } as any;
-      }
-      try {
-        return await (originalConnect as any)(...args);
-      } catch (err: any) {
-        console.warn('[PostgreSQL Pool] Connection failed — falling back to mock client:', err.message);
-        return {
-          query: async () => ({ rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] }),
-          release: () => {},
-        } as any;
-      }
-    }) as any;
-
-    this.pool.query = (async (...args: any[]) => {
-      if (this.isFallbackMode) {
-        return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] } as any;
-      }
-      try {
-        return await (originalQuery as any)(...args);
-      } catch (err: any) {
-        console.warn('[PostgreSQL Pool] Query failed — returning mock empty result:', err.message);
-        return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] } as any;
-      }
-    }) as any;
   }
 
   public static getInstance(): PostgresAdapter {
@@ -68,19 +29,9 @@ export class PostgresAdapter {
     return PostgresAdapter.instance;
   }
 
-  private haversineDistanceKm(hubLat: number, hubLng: number, targetLat: number, targetLng: number): number {
-    const R = 6371;
-    const dLat = (targetLat - hubLat) * Math.PI / 180;
-    const dLng = (targetLng - hubLng) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(hubLat * Math.PI / 180) * Math.cos(targetLat * Math.PI / 180) *
-              Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return parseFloat((R * c).toFixed(3));
-  }
-
   /**
-   * Authoritative PostGIS 20 km territory calculation directly in the database engine
+   * Authoritative PostGIS 20 km territory calculation directly in the database engine.
+   * Strictly enforces geography ST_DWithin with a 20,000-metre radius limit.
    */
   public async validateTerritoryPostGIS(
     hubLat: number,
@@ -89,48 +40,31 @@ export class PostgresAdapter {
     targetLng: number,
     maxRadiusMeters: number = 20000.0
   ): Promise<{ isWithin: boolean; exactDistanceKm: number }> {
-    if (this.isFallbackMode || !process.env.SQL_HOST) {
-      const distKm = this.haversineDistanceKm(hubLat, hubLng, targetLat, targetLng);
-      return {
-        isWithin: (distKm * 1000) <= maxRadiusMeters,
-        exactDistanceKm: distKm,
-      };
-    }
+    const client = await this.pool.connect();
     try {
-      const client = await this.pool.connect();
-      try {
-        const res = await client.query(`
-          SELECT 
-            (ST_Distance(
-              ST_SetSRID(ST_Point($2::float8, $1::float8), 4326)::geography,
-              ST_SetSRID(ST_Point($4::float8, $3::float8), 4326)::geography
-            ) <= $5::float8) AS is_within,
-            (ST_Distance(
-              ST_SetSRID(ST_Point($2::float8, $1::float8), 4326)::geography,
-              ST_SetSRID(ST_Point($4::float8, $3::float8), 4326)::geography
-            ) / 1000.0) AS exact_distance_km;
-        `, [hubLat, hubLng, targetLat, targetLng, maxRadiusMeters]);
+      const res = await client.query(`
+        SELECT 
+          ST_DWithin(
+            ST_SetSRID(ST_Point($2::float8, $1::float8), 4326)::geography,
+            ST_SetSRID(ST_Point($4::float8, $3::float8), 4326)::geography,
+            $5::float8
+          ) AS is_within,
+          (ST_Distance(
+            ST_SetSRID(ST_Point($2::float8, $1::float8), 4326)::geography,
+            ST_SetSRID(ST_Point($4::float8, $3::float8), 4326)::geography
+          ) / 1000.0) AS exact_distance_km;
+      `, [hubLat, hubLng, targetLat, targetLng, maxRadiusMeters]);
 
-        if (res.rows && res.rows[0]) {
-          return {
-            isWithin: Boolean(res.rows[0].is_within),
-            exactDistanceKm: parseFloat(res.rows[0].exact_distance_km),
-          };
-        }
-        const distKm = this.haversineDistanceKm(hubLat, hubLng, targetLat, targetLng);
-        return {
-          isWithin: (distKm * 1000) <= maxRadiusMeters,
-          exactDistanceKm: distKm,
-        };
-      } finally {
-        client.release();
+      if (!res.rows || res.rows.length === 0) {
+        throw new Error('POSTGIS_CALCULATION_FAILED: Empty spatial response from engine');
       }
-    } catch {
-      const distKm = this.haversineDistanceKm(hubLat, hubLng, targetLat, targetLng);
+
       return {
-        isWithin: (distKm * 1000) <= maxRadiusMeters,
-        exactDistanceKm: distKm,
+        isWithin: Boolean(res.rows[0].is_within),
+        exactDistanceKm: parseFloat(res.rows[0].exact_distance_km),
       };
+    } finally {
+      client.release();
     }
   }
 
@@ -145,9 +79,7 @@ export class PostgresAdapter {
       await client.query('COMMIT;');
       return result;
     } catch (err) {
-      try {
-        await client.query('ROLLBACK;');
-      } catch {}
+      await client.query('ROLLBACK;');
       throw err;
     } finally {
       client.release();
@@ -162,15 +94,8 @@ export class PostgresAdapter {
     postgresVersion: string;
     postgisVersion: string;
     tableCount: number;
+    error?: string;
   }> {
-    if (this.isFallbackMode || !process.env.SQL_HOST) {
-      return {
-        connected: false,
-        postgresVersion: 'Autonomous In-Memory/SQLite Engine',
-        postgisVersion: 'Geospatial Haversine Fallback',
-        tableCount: 0,
-      };
-    }
     try {
       const client = await this.pool.connect();
       try {
@@ -191,12 +116,13 @@ export class PostgresAdapter {
       } finally {
         client.release();
       }
-    } catch {
+    } catch (err: any) {
       return {
         connected: false,
-        postgresVersion: 'Autonomous In-Memory/SQLite Engine',
-        postgisVersion: 'Geospatial Haversine Fallback',
+        postgresVersion: 'UNAVAILABLE',
+        postgisVersion: 'UNAVAILABLE',
         tableCount: 0,
+        error: err.message,
       };
     }
   }

@@ -99,19 +99,61 @@ aiRouter.post('/support/order-query', authenticateToken, async (req: Authenticat
   }
 });
 
+// In-memory sliding-window rate limiter for AI Chat (max 15 requests / 60 seconds per user)
+const chatRateLimitTracker = new Map<string, { count: number; resetAt: number }>();
+
 // ==========================================
 // 5. AI CUSTOMER MULTILINGUAL CHAT ASSISTANT
 // ==========================================
-aiRouter.post('/chat', async (req: Request, res: Response) => {
+aiRouter.post('/chat', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { prompt, detectedLang, orderNumber, businessName } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: 'MISSING_PROMPT' });
+    const userId = req.user!.userId;
+    const now = Date.now();
+
+    // 1. Sliding window rate limiter
+    const userLimit = chatRateLimitTracker.get(userId);
+    if (userLimit && userLimit.resetAt > now) {
+      if (userLimit.count >= 15) {
+        return res.status(429).json({
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: 'AI chat request limit exceeded (maximum 15 requests/minute). Please wait before trying again.'
+        });
+      }
+      userLimit.count++;
+    } else {
+      chatRateLimitTracker.set(userId, { count: 1, resetAt: now + 60000 });
     }
+
+    // 2. Input validation
+    const { prompt, detectedLang, orderNumber, businessName } = req.body;
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'MISSING_PROMPT', message: 'A text prompt string is required.' });
+    }
+
+    const trimmedPrompt = prompt.trim();
+    if (trimmedPrompt.length === 0 || trimmedPrompt.length > 1000) {
+      return res.status(400).json({
+        error: 'INVALID_PROMPT_LENGTH',
+        message: 'Prompt must be between 1 and 1000 characters in length.'
+      });
+    }
+
+    // 3. Prompt injection detection and defense
+    const scan = GeminiAIService.sanitizeAndDetectInjection(trimmedPrompt);
+    if (!scan.isSafe) {
+      console.warn(`[AI Security] Prompt injection attempt blocked for user ${userId}:`, scan.flaggedPatterns);
+      return res.status(400).json({
+        error: 'PROMPT_INJECTION_DETECTED',
+        message: 'Disallowed instructions or system prompt override patterns detected in query.',
+        flaggedPatterns: scan.flaggedPatterns
+      });
+    }
+
+    // 4. Server-authoritative generation
     const ai = getGeminiClient();
     const resp = await ai.models.generateContent({
       model: GEMINI_TEXT_MODEL,
-      contents: prompt,
+      contents: scan.sanitized,
       config: {
         systemInstruction: `You are the polite, multilingual TUXI Customer Support AI.
 The user is speaking in language code: "${detectedLang || 'en'}".
@@ -120,6 +162,7 @@ Active Order: #${orderNumber || 'TX-8921'} (${businessName || 'Store'}), Status:
 If the user asks to change the app language to another country or language, inform them that TUXI automatically localizes to their preference.`
       }
     });
+
     res.json({ text: resp.text || '' });
   } catch (err: any) {
     console.warn('[AI Chat Route Warning]', err.message);

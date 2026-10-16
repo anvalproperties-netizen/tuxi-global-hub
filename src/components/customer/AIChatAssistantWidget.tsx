@@ -501,25 +501,31 @@ export const AIChatAssistantWidget: React.FC = () => {
 
     // 4. Server-Side Multilingual Gemini Translation & Support Proxy
     let finalAnswer = '';
-    try {
-      const chatRes = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: userPrompt,
-          detectedLang,
-          orderNumber: latestActiveOrder?.orderNumber || 'TX-8921',
-          businessName: latestActiveOrder?.businessName || 'Store'
-        })
-      });
-      if (chatRes.ok) {
-        const data = await chatRes.json();
-        if (data.text) {
-          finalAnswer = data.text;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('tuxi_auth_token') : null;
+    if (token) {
+      try {
+        const chatRes = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            prompt: userPrompt,
+            detectedLang,
+            orderNumber: latestActiveOrder?.orderNumber || 'TX-8921',
+            businessName: latestActiveOrder?.businessName || 'Store'
+          })
+        });
+        if (chatRes.ok) {
+          const data = await chatRes.json();
+          if (data.text) {
+            finalAnswer = data.text;
+          }
         }
+      } catch (err) {
+        console.warn('Gemini server chat fallback to domain logic:', err);
       }
-    } catch (err) {
-      console.warn('Gemini server chat fallback to domain logic:', err);
     }
 
     if (!finalAnswer) {
