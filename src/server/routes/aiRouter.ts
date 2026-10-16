@@ -1,6 +1,7 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { GeminiAIService } from '../services/geminiAIService.js';
 import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth.js';
+import { getGeminiClient, GEMINI_TEXT_MODEL } from '../ai/geminiClient.js';
 
 export const aiRouter = Router();
 
@@ -95,5 +96,33 @@ aiRouter.post('/support/order-query', authenticateToken, async (req: Authenticat
   } catch (err: any) {
     const status = err.message.includes('FORBIDDEN') ? 403 : err.message.includes('NOT_FOUND') ? 404 : 400;
     res.status(status).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// 5. AI CUSTOMER MULTILINGUAL CHAT ASSISTANT
+// ==========================================
+aiRouter.post('/chat', async (req: Request, res: Response) => {
+  try {
+    const { prompt, detectedLang, orderNumber, businessName } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: 'MISSING_PROMPT' });
+    }
+    const ai = getGeminiClient();
+    const resp = await ai.models.generateContent({
+      model: GEMINI_TEXT_MODEL,
+      contents: prompt,
+      config: {
+        systemInstruction: `You are the polite, multilingual TUXI Customer Support AI.
+The user is speaking in language code: "${detectedLang || 'en'}".
+Translate and respond FLUENTLY in that exact language (${detectedLang || 'en'}).
+Active Order: #${orderNumber || 'TX-8921'} (${businessName || 'Store'}), Status: in_transit with courier Alex Turner.
+If the user asks to change the app language to another country or language, inform them that TUXI automatically localizes to their preference.`
+      }
+    });
+    res.json({ text: resp.text || '' });
+  } catch (err: any) {
+    console.warn('[AI Chat Route Warning]', err.message);
+    res.status(500).json({ error: err.message });
   }
 });

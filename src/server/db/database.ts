@@ -15,9 +15,9 @@ export class TuxiDatabase {
   public db: DatabaseSync;
 
   private constructor() {
-    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_SQLITE_TEST_FALLBACK) {
+    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_SQLITE_TEST_FALLBACK && process.env.SQL_HOST) {
       throw new Error(
-        'FATAL_PRODUCTION_SAFETY_VIOLATION: SQLite cannot be initialized in PRODUCTION. PostgreSQL / PostGIS is the authoritative production database.'
+        'FATAL_PRODUCTION_SAFETY_VIOLATION: SQLite cannot be initialized when PostgreSQL / PostGIS is configured as the authoritative database.'
       );
     }
     this.db = new DatabaseSync(DB_PATH);

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTuxi } from '../../context/TuxiContext';
-import { GoogleGenAI } from '@google/genai';
 import { 
   SUPPORTED_LANGUAGES, 
   detectTextLanguage, 
@@ -500,28 +499,27 @@ export const AIChatAssistantWidget: React.FC = () => {
       return;
     }
 
-    // 4. Gemini API Fallback with Automated Multilingual Prompting
+    // 4. Server-Side Multilingual Gemini Translation & Support Proxy
     let finalAnswer = '';
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY);
-
-    if (apiKey) {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const resp = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: userPrompt,
-          config: {
-            systemInstruction: `You are the polite, multilingual TUXI Customer Support AI.
-The user is speaking in language code: "${detectedLang}".
-Translate and respond FLUENTLY in that exact language (${detectedLang}).
-Active Order: #${latestActiveOrder?.orderNumber || 'TX-8921'} (${latestActiveOrder?.businessName || 'Store'}), Status: in_transit with courier Alex Turner.
-If the user asks to change the app language to another country or language, inform them that TUXI automatically localizes to their preference.`
-          }
-        });
-        finalAnswer = resp.text || '';
-      } catch (err) {
-        console.warn('Gemini translation call fallback to domain logic:', err);
+    try {
+      const chatRes = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: userPrompt,
+          detectedLang,
+          orderNumber: latestActiveOrder?.orderNumber || 'TX-8921',
+          businessName: latestActiveOrder?.businessName || 'Store'
+        })
+      });
+      if (chatRes.ok) {
+        const data = await chatRes.json();
+        if (data.text) {
+          finalAnswer = data.text;
+        }
       }
+    } catch (err) {
+      console.warn('Gemini server chat fallback to domain logic:', err);
     }
 
     if (!finalAnswer) {
