@@ -95,7 +95,7 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
   const currentStop = optimizedRoute.stops[activeStopIndex] || optimizedRoute.stops[0];
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 sm:space-y-6 max-w-full overflow-x-hidden ${className}`}>
       
       {/* Feedback Banner */}
       {appliedFeedback && (
@@ -113,16 +113,16 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
       )}
 
       {/* Main Header Card */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-700/40 rounded-2xl p-6 text-white shadow-md">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-700/40 rounded-2xl p-4 sm:p-6 text-white shadow-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-indigo-600 text-white shadow-md">
-              <Compass className="w-6 h-6 animate-pulse" />
+          <div className="flex items-start sm:items-center gap-3 sm:gap-3.5 min-w-0">
+            <div className="p-2.5 sm:p-3 rounded-2xl bg-indigo-600 text-white shadow-md shrink-0 mt-0.5 sm:mt-0">
+              <Compass className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold">AI Multi-Stop Route Optimizer</h3>
-                <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase bg-cyan-400/20 text-cyan-300 border border-cyan-400/30">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h3 className="text-base sm:text-lg font-bold">AI Multi-Stop Route Optimizer</h3>
+                <span className="px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-bold uppercase bg-cyan-400/20 text-cyan-300 border border-cyan-400/30">
                   LIVE TRAFFIC HEURISTICS
                 </span>
               </div>
@@ -133,32 +133,32 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0">
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0 w-full sm:w-auto">
             <button
               onClick={handleToggleSimulatedIncident}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1.5 flex-1 sm:flex-initial min-h-[38px] ${
                 hasIncident
                   ? 'bg-rose-600 text-white border-rose-500 shadow-md animate-pulse'
                   : 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/20'
               }`}
               title="Simulate sudden traffic incident to test dynamic reroute"
             >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>{hasIncident ? 'Clear A10 Gridlock Detour' : 'Simulate Traffic Jam (+14m)'}</span>
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>{hasIncident ? 'Clear Detour' : 'Simulate Jam (+14m)'}</span>
             </button>
 
             <button
               onClick={handleApplyRoute}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md transition-colors"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-colors flex-1 sm:flex-initial min-h-[38px]"
             >
-              <Navigation className="w-3.5 h-3.5" />
-              <span>Apply Optimized Route</span>
+              <Navigation className="w-3.5 h-3.5 shrink-0" />
+              <span>Apply Route</span>
             </button>
           </div>
         </div>
 
         {/* Objective Mode Selectors */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-6 pt-5 border-t border-indigo-800/50">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5 mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-indigo-800/50">
           {[
             {
               id: 'fastest_time' as const,
@@ -188,14 +188,14 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
               <button
                 key={m.id}
                 onClick={() => setObjective(m.id)}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`p-3 rounded-xl border text-left transition-all min-h-[44px] ${
                   isSelected
                     ? 'bg-indigo-600/40 border-indigo-400 ring-2 ring-indigo-400/30 text-white'
                     : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <Icon className={`w-4 h-4 ${m.color}`} />
+                  <Icon className={`w-4 h-4 ${m.color} shrink-0`} />
                   <span className="font-bold text-xs">{m.label}</span>
                 </div>
                 <p className="text-[11px] opacity-80">{m.desc}</p>
@@ -205,57 +205,57 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
         </div>
 
         {/* Route Metrics KPI Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-indigo-800/40 text-xs">
-          <div className="bg-black/30 border border-white/10 rounded-xl p-3">
-            <span className="text-[11px] text-slate-400 block flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mt-4 pt-4 border-t border-indigo-800/40 text-xs">
+          <div className="bg-black/30 border border-white/10 rounded-xl p-3 min-w-0">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <span>Total Route ETA</span>
             </span>
-            <span className="text-xl font-bold font-mono text-white mt-0.5 block">
+            <span className="text-lg sm:text-xl font-bold font-mono text-white mt-0.5 block truncate">
               {optimizedRoute.totalDurationMinutes} mins
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">
+            <span className="text-[10px] text-slate-400 font-mono block truncate">
               Finish by ~{optimizedRoute.estimatedArrivalAtFinalStop}
             </span>
           </div>
 
-          <div className="bg-black/30 border border-white/10 rounded-xl p-3">
-            <span className="text-[11px] text-slate-400 block flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="bg-black/30 border border-white/10 rounded-xl p-3 min-w-0">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <span>Distance &amp; Stops</span>
             </span>
-            <span className="text-xl font-bold font-mono text-white mt-0.5 block">
+            <span className="text-lg sm:text-xl font-bold font-mono text-white mt-0.5 block truncate">
               {optimizedRoute.totalDistanceKm} km
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">
+            <span className="text-[10px] text-slate-400 font-mono block truncate">
               {optimizedRoute.stops.length} Deliveries &amp; Pickups
             </span>
           </div>
 
-          <div className="bg-black/30 border border-white/10 rounded-xl p-3">
-            <span className="text-[11px] text-slate-400 block flex items-center gap-1">
-              <Fuel className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="bg-black/30 border border-white/10 rounded-xl p-3 min-w-0">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <Fuel className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span>Fuel &amp; Carbon Savings</span>
             </span>
-            <span className="text-xl font-bold font-mono text-emerald-400 mt-0.5 block">
+            <span className="text-lg sm:text-xl font-bold font-mono text-emerald-400 mt-0.5 block truncate">
               -{optimizedRoute.fuelSavingsPercent}% ({optimizedRoute.fuelSavedLiters}L)
             </span>
-            <span className="text-[10px] text-emerald-300 font-mono">
+            <span className="text-[10px] text-emerald-300 font-mono block truncate">
               -{optimizedRoute.co2SavedKg}kg CO₂ reduction
             </span>
           </div>
 
-          <div className="bg-black/30 border border-white/10 rounded-xl p-3">
-            <span className="text-[11px] text-slate-400 block flex items-center gap-1">
-              <Gauge className="w-3.5 h-3.5 text-amber-400" />
+          <div className="bg-black/30 border border-white/10 rounded-xl p-3 min-w-0">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <Gauge className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>Live Traffic Delay</span>
             </span>
-            <span className={`text-xl font-bold font-mono mt-0.5 block ${
+            <span className={`text-lg sm:text-xl font-bold font-mono mt-0.5 block truncate ${
               optimizedRoute.totalTrafficDelayMinutes > 8 ? 'text-rose-400' : 'text-amber-400'
             }`}>
               +{optimizedRoute.totalTrafficDelayMinutes} mins
             </span>
-            <span className="text-[10px] uppercase font-mono font-bold text-slate-400">
+            <span className="text-[10px] uppercase font-mono font-bold text-slate-400 block truncate">
               Traffic: {optimizedRoute.liveCongestionSeverity}
             </span>
           </div>
@@ -316,21 +316,21 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
             />
 
             {/* Current Active Leg Guidance Card */}
-            <div className="p-3.5 bg-slate-900 text-white rounded-xl flex items-center justify-between text-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs font-mono">
+            <div className="p-3 sm:p-3.5 bg-slate-900 text-white rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs font-mono shrink-0">
                   {activeStopIndex + 1}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <span className="text-[10px] uppercase font-bold text-indigo-300 block">
                     Next Stop: {currentStop.type.toUpperCase()}
                   </span>
-                  <span className="font-bold text-sm text-white">{currentStop.title}</span>
+                  <span className="font-bold text-sm text-white block truncate">{currentStop.title}</span>
                   <span className="text-[11px] text-slate-300 block truncate">{currentStop.address}</span>
                 </div>
               </div>
 
-              <div className="text-right shrink-0">
+              <div className="text-left sm:text-right shrink-0">
                 <span className="text-[10px] text-slate-400 block font-mono">Target Window</span>
                 <span className="text-sm font-bold text-cyan-300 font-mono">
                   {currentStop.timeWindowDeadline}
@@ -342,7 +342,7 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
 
         {/* Right Column: Sequenced Waypoints & Road Legs */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 text-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h4 className="font-bold text-slate-900 text-sm">Optimized Waypoint Sequence</h4>
@@ -351,7 +351,7 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
                 </p>
               </div>
 
-              <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase">
+              <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase shrink-0">
                 {optimizedRoute.stops.length} Waypoints
               </span>
             </div>
@@ -376,8 +376,8 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
                   >
                     {/* Header: Stop Number, Type, Title */}
                     <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold font-mono text-xs ${
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold font-mono text-xs shrink-0 ${
                           stop.completed
                             ? 'bg-emerald-600 text-white'
                             : isSelected
@@ -387,10 +387,10 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
                           {stop.completed ? <Check className="w-3.5 h-3.5" /> : index + 1}
                         </div>
 
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-900">{stop.title}</span>
-                            <span className={`px-1.5 py-0.2 rounded font-mono text-[9px] font-bold uppercase ${
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-bold text-slate-900 truncate">{stop.title}</span>
+                            <span className={`px-1.5 py-0.2 rounded font-mono text-[9px] font-bold uppercase shrink-0 ${
                               stop.type === 'pickup'
                                 ? 'bg-amber-100 text-amber-800'
                                 : 'bg-emerald-100 text-emerald-800'
@@ -402,7 +402,7 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0">
+                      <div className="text-right shrink-0 ml-2">
                         <span className="text-[10px] text-slate-400 font-mono block">Deadline</span>
                         <span className="font-bold font-mono text-slate-800 text-xs">
                           {stop.timeWindowDeadline}
@@ -412,7 +412,7 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
 
                     {/* Road Leg & Traffic Condition Details */}
                     {leg && (
-                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-500 font-mono">
                         <span className="truncate max-w-[170px]" title={leg.roadName}>
                           via {leg.roadName}
                         </span>
@@ -441,8 +441,8 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
                     )}
 
                     {/* Contact & Mark Completed Controls */}
-                    <div className="mt-2 pt-2 border-t border-slate-100/80 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400">
+                    <div className="mt-2 pt-2 border-t border-slate-100/80 flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-slate-400 truncate">
                         Package: {stop.packageSummary}
                       </span>
 
@@ -451,9 +451,9 @@ export const MultiStopRouteOptimizer: React.FC<MultiStopRouteOptimizerProps> = (
                           e.stopPropagation();
                           handleToggleStopCompleted(stop.id);
                         }}
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors shrink-0 min-h-[30px] ${
                           stop.completed
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800'
                             : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                         }`}
                       >

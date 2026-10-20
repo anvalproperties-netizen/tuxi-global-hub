@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTuxi } from '../../context/TuxiContext';
 import { 
   AIExceptionItem, 
@@ -129,50 +129,81 @@ export const AdminAICommandCenter: React.FC = () => {
     setTimeout(() => setMonetizationSavedFeedback(false), 3000);
   };
 
+  // Responsive map height state for small screens (320px-430px) up to desktop
+  const [mapHeight, setMapHeight] = useState<string>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) return '300px';
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) return '380px';
+    return '480px';
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) setMapHeight('300px');
+      else if (window.innerWidth < 1024) setMapHeight('380px');
+      else setMapHeight('480px');
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const ADMIN_TABS: { id: typeof activeTab; label: string; shortLabel: string; icon?: React.ReactNode; badge?: string | number; badgeColor?: string }[] = [
+    { id: 'overview', label: 'Executive Overview', shortLabel: 'Overview' },
+    { id: 'global_launch', label: `Global Launch Control (${globalCities.length})`, shortLabel: `Global (${globalCities.length})`, icon: <Globe className="w-3.5 h-3.5 text-indigo-600" /> },
+    { id: 'monetization', label: 'Monetization & Plans Engine', shortLabel: 'Monetization', icon: <Percent className="w-3.5 h-3.5 text-indigo-600" /> },
+    { id: 'exceptions', label: 'Exception Queue', shortLabel: 'Exceptions', badge: pendingExceptions.length > 0 ? pendingExceptions.length : undefined, badgeColor: 'bg-amber-500 text-white' },
+    { id: 'territories', label: 'Territory Governance (20km)', shortLabel: 'Territories (20km)' },
+    { id: 'review', label: `Application Inspector (${businesses.length})`, shortLabel: `Applications (${businesses.length})` },
+    { id: 'finance', label: 'Finance & Royalties', shortLabel: 'Finance' },
+    { id: 'integrations', label: 'External Integrations', shortLabel: 'Integrations', badge: '2G', badgeColor: 'bg-emerald-600 text-white' },
+    { id: 'ai_insights', label: 'AI Insights & Metrics', shortLabel: 'AI Insights', icon: <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />, badge: 'NEW', badgeColor: 'bg-indigo-600 text-white' },
+    { id: 'ai_logs', label: `AI Audit Trail (${aiWorkflowRuns.length})`, shortLabel: `Audit Trail (${aiWorkflowRuns.length})`, icon: <Activity className="w-3.5 h-3.5 text-indigo-500" /> },
+    { id: 'settings', label: 'Platform Settings', shortLabel: 'Settings' },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-x-hidden">
       
       {/* Top Banner: AI Authority & Kill Switch Bar */}
-      <div className={`rounded-xl border p-4 transition-all shadow-xs ${
+      <div className={`rounded-xl border p-3.5 sm:p-4 transition-all shadow-xs ${
         config.aiMasterKillSwitch 
           ? 'bg-rose-950 border-rose-800 text-rose-100 ring-2 ring-rose-500' 
           : 'bg-slate-900 border-slate-800 text-slate-100'
       }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg ${
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3">
+            <div className={`p-2 sm:p-2.5 rounded-lg shrink-0 mt-0.5 sm:mt-0 ${
               config.aiMasterKillSwitch ? 'bg-rose-800 text-white' : 'bg-slate-800 text-emerald-400'
             }`}>
-              <ShieldAlert className="w-5 h-5" />
+              <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold">TUXI AI Autonomous Command Center</h1>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h1 className="text-sm sm:text-base font-bold">TUXI AI Autonomous Command Center</h1>
+                <span className={`text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
                   config.aiMasterKillSwitch 
                     ? 'bg-rose-600 text-white' 
                     : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                 }`}>
-                  {config.aiMasterKillSwitch ? 'AI Approvals Suspended' : 'Level-2 Autonomous Active'}
+                  {config.aiMasterKillSwitch ? 'AI Suspended' : 'Level-2 Active'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
                 AI orchestrates routine onboarding, OCR extraction, distance logic, and dispatches. Human supervisors handle exceptions.
               </p>
             </div>
           </div>
 
           {/* Emergency Kill Switch Button */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
             <button
               onClick={toggleAIKillSwitch}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`w-full md:w-auto justify-center px-4 py-2 sm:py-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 min-h-[40px] cursor-pointer ${
                 config.aiMasterKillSwitch
                   ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md'
                   : 'bg-rose-600 hover:bg-rose-700 text-white shadow-md'
               }`}
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>
                 {config.aiMasterKillSwitch ? 'Resume AI Autonomous Mode' : 'Emergency AI Kill Switch'}
               </span>
@@ -181,112 +212,59 @@ export const AdminAICommandCenter: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Tabs Navigation */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg overflow-x-auto text-xs font-semibold">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-            activeTab === 'overview' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Executive Overview
-        </button>
-        <button
-          onClick={() => setActiveTab('global_launch')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'global_launch' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Global Launch Control ({globalCities.length} Cities)</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('monetization')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'monetization' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Percent className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Monetization &amp; Plans Engine</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('exceptions')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'exceptions' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <span>Exception Queue</span>
-          {pendingExceptions.length > 0 && (
-            <span className="bg-amber-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
-              {pendingExceptions.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('territories')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-            activeTab === 'territories' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Territory Governance (20km)
-        </button>
-        <button
-          onClick={() => setActiveTab('review')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-            activeTab === 'review' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Application Inspector ({businesses.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('finance')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-            activeTab === 'finance' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Finance &amp; Royalties
-        </button>
-        <button
-          onClick={() => setActiveTab('integrations')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'integrations' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Server className="w-3.5 h-3.5 text-indigo-600" />
-          <span>External Integrations</span>
-          <span className="bg-emerald-600 text-white text-[9px] font-mono px-1 rounded font-bold">
-            2G
+      {/* Mobile Tab Selector Drawer (Discoverable dropdown for all 11 tabs on <1024px) */}
+      <div className="lg:hidden bg-slate-100 p-2 sm:p-2.5 rounded-xl flex items-center justify-between gap-2 border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0 pl-1">
+            Tab:
           </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('ai_insights')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'ai_insights' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
-          <span>AI Insights &amp; Metrics</span>
-          <span className="bg-indigo-600 text-white text-[9px] font-mono px-1 rounded font-bold">
-            NEW
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('ai_logs')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'ai_logs' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Activity className="w-3.5 h-3.5 text-indigo-500" />
-          <span>AI Audit Trail ({aiWorkflowRuns.length})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
-            activeTab === 'settings' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Platform Settings
-        </button>
+          <select
+            value={activeTab}
+            onChange={e => setActiveTab(e.target.value as any)}
+            aria-label="Select Admin Workspace"
+            className="w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer truncate shadow-2xs"
+          >
+            {ADMIN_TABS.map(tab => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {pendingExceptions.length > 0 && activeTab !== 'exceptions' && (
+          <button
+            onClick={() => setActiveTab('exceptions')}
+            className="shrink-0 px-2 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-lg flex items-center gap-1 shadow-2xs cursor-pointer"
+            title={`${pendingExceptions.length} pending exceptions require review`}
+          >
+            <span>{pendingExceptions.length} Pending</span>
+          </button>
+        )}
+      </div>
+
+      {/* Main Tabs Navigation (Horizontal pill track with touch scrolling) */}
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg overflow-x-auto text-xs font-semibold scrollbar-none">
+        {ADMIN_TABS.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                isActive ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+              {tab.badge !== undefined && (
+                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full ${tab.badgeColor || 'bg-slate-200 text-slate-700'}`}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* TAB 1: EXECUTIVE OVERVIEW */}
@@ -294,34 +272,34 @@ export const AdminAICommandCenter: React.FC = () => {
         <div className="space-y-6">
           
           {/* Top KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Gross Merchandise Value (GMV)</span>
-              <div className="text-2xl font-black text-slate-900 tabular-nums mt-1">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums mt-1">
                 {config.currencySymbol}{totalGmv.toLocaleString()}
               </div>
               <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">+18.4% this month</span>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+            <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Platform Net Revenue</span>
-              <div className="text-2xl font-black text-slate-900 tabular-nums mt-1">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums mt-1">
                 {config.currencySymbol}{platformRevenue.toLocaleString()}
               </div>
               <span className="text-[11px] text-slate-400 mt-1 block">From Eats 15% &amp; Shop 12% fee</span>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+            <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">AI Automation Rate</span>
-              <div className="text-2xl font-black text-indigo-600 tabular-nums mt-1">
+              <div className="text-xl sm:text-2xl font-black text-indigo-600 tabular-nums mt-1">
                 86.2%
               </div>
               <span className="text-[11px] text-slate-400 mt-1 block">Routine workflows autonomous</span>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+            <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Pending Exceptions</span>
-              <div className={`text-2xl font-black tabular-nums mt-1 ${criticalCount > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+              <div className={`text-xl sm:text-2xl font-black tabular-nums mt-1 ${criticalCount > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
                 {pendingExceptions.length}
               </div>
               <span className="text-[11px] text-rose-500 font-semibold mt-1 block">{criticalCount} critical territory breach</span>
@@ -971,14 +949,14 @@ export const AdminAICommandCenter: React.FC = () => {
               </div>
 
               {/* Customer Grocery Fee */}
-              <div className="p-4 bg-emerald-50/40 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
+              <div className="p-3.5 sm:p-4 bg-emerald-50/40 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div>
                   <span className="font-bold text-slate-900 text-xs block">Customer Grocery Service Fee (%)</span>
                   <p className="text-slate-600 text-[11px] mt-0.5">
                     To balance low grocery margins, consumers pay a 5% service fee on grocery subtotals alongside delivery fees.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                   <input
                     type="number"
                     min="1"
@@ -993,12 +971,12 @@ export const AdminAICommandCenter: React.FC = () => {
             </div>
 
             {/* Save Button */}
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all"
+                className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all min-h-[40px] cursor-pointer"
               >
-                <Check className="w-4 h-4 text-emerald-400" />
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>Save &amp; Propagate Monetization Plans</span>
               </button>
             </div>
@@ -1070,26 +1048,26 @@ export const AdminAICommandCenter: React.FC = () => {
                       </div>
 
                       {/* One-Click Resolution Actions */}
-                      <div className="flex flex-row md:flex-col gap-2 shrink-0">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 md:flex md:flex-col gap-2 w-full md:w-auto shrink-0 pt-2 md:pt-0">
                         <button
                           onClick={() => resolveException(exc.id, 'approve', overrideReason)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                          className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-xs min-h-[38px] cursor-pointer"
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="w-3.5 h-3.5 shrink-0" />
                           <span>Approve with Override</span>
                         </button>
                         <button
                           onClick={() => resolveException(exc.id, 'request_info')}
-                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                          className="w-full px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors min-h-[38px] cursor-pointer"
                         >
-                          <HelpCircle className="w-3.5 h-3.5" />
+                          <HelpCircle className="w-3.5 h-3.5 shrink-0" />
                           <span>Request Missing Info</span>
                         </button>
                         <button
                           onClick={() => resolveException(exc.id, 'reject', 'Violation of platform acquisition policy')}
-                          className="px-3 py-1.5 border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                          className="w-full px-3 py-2 border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors min-h-[38px] cursor-pointer"
                         >
-                          <XCircle className="w-3.5 h-3.5" />
+                          <XCircle className="w-3.5 h-3.5 shrink-0" />
                           <span>Reject Application</span>
                         </button>
                       </div>
@@ -1104,15 +1082,15 @@ export const AdminAICommandCenter: React.FC = () => {
 
       {/* TAB 3: TERRITORY GOVERNANCE (Brief Section 4 & 6) */}
       {activeTab === 'territories' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-base font-bold text-slate-900">Territory Management &amp; Multi-Rep Hub Map</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Backend geospatial engine maps all active Rep home hubs with their 20.0 km acquisition perimeters to prevent claim collisions.
               </p>
             </div>
-            <div className="text-xs text-slate-500 font-mono">
+            <div className="text-xs text-slate-500 font-mono self-start sm:self-auto shrink-0">
               Enforcement Mode: <span className="text-emerald-600 font-bold">STRICT_GEOSPATIAL</span>
             </div>
           </div>
@@ -1123,7 +1101,7 @@ export const AdminAICommandCenter: React.FC = () => {
             activeRep={inspectRep}
             businesses={businesses}
             drivers={allDrivers}
-            height="480px"
+            height={mapHeight}
           />
 
           {/* Rep Hub Selector & Controls */}

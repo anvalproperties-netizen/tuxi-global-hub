@@ -264,29 +264,29 @@ export const RepView: React.FC = () => {
           </div>
 
           {/* Key Metrics */}
-          <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6">
-            <div>
-              <div className="text-xs text-slate-500 font-medium">Acquired Stores</div>
-              <div className="text-lg font-bold text-slate-900 tabular-nums">{myBusinesses.length}</div>
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 border-t md:border-t-0 md:border-l border-slate-200 pt-3 md:pt-0 md:pl-6">
+            <div className="min-w-[80px]">
+              <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Acquired Stores</div>
+              <div className="text-base sm:text-lg font-bold text-slate-900 tabular-nums">{myBusinesses.length}</div>
             </div>
-            <div>
-              <div className="text-xs text-slate-500 font-medium">Live & Earning</div>
-              <div className="text-lg font-bold text-emerald-600 tabular-nums">{liveCount}</div>
+            <div className="min-w-[80px]">
+              <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Live & Earning</div>
+              <div className="text-base sm:text-lg font-bold text-emerald-600 tabular-nums">{liveCount}</div>
             </div>
-            <div>
-              <div className="text-xs text-slate-500 font-medium">Pending Bounty</div>
-              <div className="text-lg font-bold text-indigo-600 tabular-nums">{config.currencySymbol}{currentRep.pendingCommission}</div>
+            <div className="min-w-[90px]">
+              <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Pending Bounty</div>
+              <div className="text-base sm:text-lg font-bold text-indigo-600 tabular-nums">{config.currencySymbol}{currentRep.pendingCommission}</div>
             </div>
           </div>
         </div>
 
         {/* Tab navigation */}
-        <div className="flex items-center gap-2 mt-6 pt-4 border-t border-slate-100">
+        <div className="flex items-center gap-1.5 sm:gap-2 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-100 overflow-x-auto scrollbar-none flex-nowrap -mx-2 px-2 sm:mx-0 sm:px-0">
           <button
             onClick={() => setActiveTab('onboard')}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'onboard' 
-                ? 'bg-slate-900 text-white' 
+                ? 'bg-slate-900 text-white shadow-xs' 
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -295,9 +295,9 @@ export const RepView: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'dashboard' 
-                ? 'bg-slate-900 text-white' 
+                ? 'bg-slate-900 text-white shadow-xs' 
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -306,9 +306,9 @@ export const RepView: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('territory')}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'territory' 
-                ? 'bg-slate-900 text-white' 
+                ? 'bg-slate-900 text-white shadow-xs' 
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -317,9 +317,9 @@ export const RepView: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('commissions')}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               activeTab === 'commissions' 
-                ? 'bg-slate-900 text-white' 
+                ? 'bg-slate-900 text-white shadow-xs' 
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -335,7 +335,8 @@ export const RepView: React.FC = () => {
           
           {/* Wizard Progress Bar */}
           <div className="mb-6">
-            <div className="flex items-center justify-between text-xs text-slate-500 font-medium mb-2">
+            {/* Desktop / Tablet step breadcrumbs */}
+            <div className="hidden sm:flex items-center justify-between text-xs text-slate-500 font-medium mb-2">
               <span className={step >= 1 ? 'text-indigo-600 font-semibold' : ''}>1. Business Profile</span>
               <span aria-hidden="true">→</span>
               <span className={step >= 2 ? 'text-indigo-600 font-semibold' : ''}>2. Location & 20km Check</span>
@@ -344,6 +345,17 @@ export const RepView: React.FC = () => {
               <span aria-hidden="true">→</span>
               <span className={step >= 4 ? 'text-indigo-600 font-semibold' : ''}>4. Review & Consent</span>
             </div>
+
+            {/* Mobile compact step counter */}
+            <div className="flex sm:hidden items-center justify-between text-xs text-slate-700 font-medium mb-1.5">
+              <span className="font-bold text-indigo-600">
+                Step {step} of 4: {step === 1 ? 'Business Profile' : step === 2 ? 'Location & 20km Check' : step === 3 ? 'AI OCR & Catalog' : 'Review & Consent'}
+              </span>
+              <span className="text-[11px] text-slate-500 font-mono">
+                {Math.round((Math.min(step, 4) / 4) * 100)}%
+              </span>
+            </div>
+
             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
               <div 
                 className="bg-indigo-600 h-full transition-all duration-300"
@@ -487,7 +499,7 @@ export const RepView: React.FC = () => {
           {/* STEP 2: Geospatial 20km Territory Enforcement */}
           {step === 2 && (
             <div className="space-y-5">
-              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">Step 2: Geospatial Territory Verification</h2>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -496,8 +508,8 @@ export const RepView: React.FC = () => {
                 </div>
 
                 {/* Quick Presets for instant evaluation */}
-                <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-slate-400">Quick Test Pins:</span>
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="text-slate-400 text-[11px]">Quick Pins:</span>
                   <button
                     onClick={() => setPresetLocation('in_bounds')}
                     className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px]"
@@ -532,7 +544,7 @@ export const RepView: React.FC = () => {
               </div>
 
               {/* Territory Status Callout */}
-              <div className={`p-4 rounded-xl border flex items-start gap-3 ${
+              <div className={`p-3.5 sm:p-4 rounded-xl border flex items-start gap-3 ${
                 isWithinBoundary
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
                   : 'bg-rose-50 border-rose-200 text-rose-900'
@@ -542,14 +554,14 @@ export const RepView: React.FC = () => {
                 ) : (
                   <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                 )}
-                <div className="flex-1">
-                  <div className="text-sm font-bold flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
                     <span>
                       {isWithinBoundary 
                         ? `Territory Cleared: ${distanceKm} km from your Hub` 
                         : `Territory Boundary Breached: ${distanceKm} km from Hub`}
                     </span>
-                    <span className="font-mono text-xs">
+                    <span className="font-mono text-xs text-slate-600 shrink-0">
                       Max Allowed: {currentRep.territoryRadiusKm}.0 km
                     </span>
                   </div>
@@ -950,8 +962,8 @@ export const RepView: React.FC = () => {
 
       {/* TAB 2: STORE PORTFOLIO */}
       {activeTab === 'dashboard' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-slate-900">Acquired Stores Portfolio</h2>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -960,29 +972,30 @@ export const RepView: React.FC = () => {
             </div>
             <button
               onClick={() => { setActiveTab('onboard'); setStep(1); }}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 self-start sm:self-auto shrink-0 shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New Onboarding</span>
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <table className="w-full min-w-[620px] text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 font-semibold border-y border-slate-200">
                 <tr>
                   <th className="py-2.5 px-3">Store Name</th>
                   <th className="py-2.5 px-3">Type</th>
                   <th className="py-2.5 px-3">Distance to Hub</th>
                   <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3">Volume YTD</th>
-                  <th className="py-2.5 px-3">Commission Accrued</th>
+                  <th className="py-2.5 px-3">Store Sales (Illustrative YTD)</th>
+                  <th className="py-2.5 px-3">Verified Commission Accrued</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {myBusinesses.map(biz => {
                   const dist = biz.distanceFromRepHubKm !== undefined ? biz.distanceFromRepHubKm : calculateDistanceKm(currentRep.hubLocation, biz.location);
                   const isBreach = dist > 20;
+                  const verifiedAmount = (biz as any).verifiedCommissionEarned;
 
                   return (
                     <tr key={biz.id} className="hover:bg-slate-50/50">
@@ -1010,10 +1023,19 @@ export const RepView: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3 px-3 tabular-nums font-mono text-slate-700">
-                        {config.currencySymbol}{biz.salesVolumeYtd.toLocaleString()}
+                        <span>{config.currencySymbol}{biz.salesVolumeYtd.toLocaleString()}</span>
+                        <span className="block text-[10px] text-slate-400 font-sans font-normal">Illustrative sales</span>
                       </td>
-                      <td className="py-3 px-3 tabular-nums font-mono font-bold text-emerald-600">
-                        {config.currencySymbol}{Math.round(biz.salesVolumeYtd * 0.015 + 150).toLocaleString()}
+                      <td className="py-3 px-3 font-sans text-xs">
+                        {verifiedAmount !== undefined ? (
+                          <span className="font-mono font-bold text-emerald-600">
+                            {config.currencySymbol}{verifiedAmount.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            Pending verified commission data
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -1021,20 +1043,25 @@ export const RepView: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          <div className="text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-t border-slate-100 pt-2.5">
+            <span>* Store sales volumes are illustrative demo figures. Actual rep commissions are verified per qualifying transaction at the standard 2.5% rate (up to 3% max per terms).</span>
+            <span className="font-mono text-slate-700 shrink-0 font-medium">Standard Rate: 2.5%</span>
+          </div>
         </div>
       )}
 
       {/* TAB 3: 20KM TERRITORY RADAR */}
       {activeTab === 'territory' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div>
               <h2 className="text-base font-bold text-slate-900">20 km Acquisition Territory Radar</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Official backend-enforced coverage area centered at your home hub ({currentRep.hubAddress}).
               </p>
             </div>
-            <div className="text-xs font-mono text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <div className="text-xs font-mono text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 self-start sm:self-auto shrink-0">
               Perimeter: <strong>{currentRep.territoryRadiusKm} km radius</strong>
             </div>
           </div>
@@ -1055,9 +1082,9 @@ export const RepView: React.FC = () => {
               </span>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Exclusivity &amp; Attribution</span>
+              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Exclusivity &amp; Commission Terms</span>
               <span className="font-semibold text-slate-800">
-                TUXI Reps can earn up to 3% commission on qualifying sales made through TUXI by TUXI Eats restaurants or TUXI Shop stores they successfully signed up, subject to the TUXI Rep Terms &amp; Conditions.
+                Current standard commission rate is 2.5% on qualifying sales. Under official TUXI Rep Terms &amp; Conditions, TUXI Reps can earn up to 3% commission on qualifying sales made through TUXI by TUXI Eats restaurants or TUXI Shop stores they successfully signed up.
               </span>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -1072,12 +1099,22 @@ export const RepView: React.FC = () => {
 
       {/* TAB 4: COMMISSIONS & BOUNTIES */}
       {activeTab === 'commissions' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-6">
-          <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-base font-bold text-slate-900">Rep Payout &amp; Commission Breakdown</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              TUXI Reps can earn up to 3% commission on qualifying sales made through TUXI by TUXI Eats restaurants or TUXI Shop stores they successfully signed up, subject to the TUXI Rep Terms &amp; Conditions.
-            </p>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-6">
+          <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Rep Payout &amp; Commission Breakdown</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Current standard commission rate is <strong>2.5%</strong> on qualifying sales. TUXI Reps can earn up to 3% commission on qualifying sales made through TUXI by TUXI Eats restaurants or TUXI Shop stores they successfully signed up, subject to the TUXI Rep Terms &amp; Conditions.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto text-xs font-mono">
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
+                Standard: 2.5%
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-bold">
+                Ceiling: Up to 3.0%
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1098,11 +1135,16 @@ export const RepView: React.FC = () => {
             </div>
 
             <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl">
-              <div className="text-xs text-emerald-700 font-medium">Qualifying Sales Commission (Up to 3%)</div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-emerald-700 font-medium">Standard Commission (2.5%)</div>
+                <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
+                  Max: Up to 3%
+                </span>
+              </div>
               <div className="text-2xl font-black text-emerald-900 tabular-nums mt-1">
                 {config.currencySymbol}1,240.00 / mo
               </div>
-              <div className="text-[11px] text-emerald-700 mt-1">From {liveCount} active trading stores</div>
+              <div className="text-[11px] text-emerald-700 mt-1">From {liveCount} active trading stores (Illustrative run-rate)</div>
             </div>
           </div>
         </div>
@@ -1138,7 +1180,7 @@ export const RepView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
       {content}
     </div>
   );

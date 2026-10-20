@@ -132,26 +132,26 @@ export const DriverView: React.FC = () => {
   const isDistanceBased = telemetry.trackingMode === 'distance_based';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-x-hidden">
       
       {/* Driver Cockpit Header */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
           <img
             src={currentDriver.avatar}
             alt={currentDriver.name}
-            className="w-14 h-14 rounded-full object-cover border-2 border-slate-100 shadow-xs"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-slate-100 shadow-xs shrink-0"
           />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">{currentDriver.name}</h1>
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900">{currentDriver.name}</h1>
+              <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Verified Driver (POPIA &amp; CCPA Compliant)
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-              <span className="capitalize">{currentDriver.vehicleType}</span>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-500 mt-1">
+              <span className="capitalize font-medium text-slate-700">{currentDriver.vehicleType}</span>
               <span aria-hidden="true">·</span>
               <span className="font-mono">{currentDriver.vehiclePlate}</span>
               <span aria-hidden="true">·</span>
@@ -163,10 +163,10 @@ export const DriverView: React.FC = () => {
         </div>
 
         {/* Battery & Status Telemetry Strip */}
-        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+        <div className="flex flex-wrap items-center justify-between sm:justify-start lg:justify-end gap-3 sm:gap-4 border-t lg:border-t-0 lg:border-l border-slate-100 pt-3 lg:pt-0 lg:pl-6 w-full lg:w-auto">
           
           {/* Battery Status Indicator */}
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs shrink-0">
             <div className="text-[10px] text-slate-400 font-semibold uppercase flex items-center gap-1">
               <BatteryMedium className={`w-3.5 h-3.5 ${telemetry.batteryLevel > 20 ? 'text-emerald-600' : 'text-rose-600'}`} />
               <span>Device Battery</span>
@@ -178,29 +178,29 @@ export const DriverView: React.FC = () => {
           </div>
 
           {/* Today's Payout */}
-          <div>
-            <div className="text-xs text-slate-400 font-medium">Today&apos;s Earnings</div>
-            <div className="text-2xl font-black text-slate-900 tabular-nums">
+          <div className="shrink-0">
+            <div className="text-[11px] sm:text-xs text-slate-400 font-medium">Today&apos;s Earnings</div>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
               {formatPrice(currentDriver.todayEarnings)}
             </div>
           </div>
 
           <button
             onClick={toggleDriverOnline}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs ${
+            className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs shrink-0 ${
               currentDriver.isOnline
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                 : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
             }`}
           >
-            <Power className="w-4 h-4" />
+            <Power className="w-4 h-4 shrink-0" />
             <span>{currentDriver.isOnline ? 'Online (Accepting Jobs)' : 'Offline'}</span>
           </button>
         </div>
       </div>
 
       {/* Background GPS Safety Architecture Status Banner (Mandatory Spec 1) */}
-      <div className={`p-4 rounded-xl border transition-all text-xs ${
+      <div className={`p-3.5 sm:p-4 rounded-xl border transition-all text-xs ${
         !currentDriver.isOnline
           ? 'bg-slate-100 border-slate-200 text-slate-600'
           : isHighPrecision
@@ -208,17 +208,17 @@ export const DriverView: React.FC = () => {
           : 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${
+          <div className="flex items-start sm:items-center gap-3 min-w-0">
+            <div className={`p-2 rounded-lg shrink-0 mt-0.5 sm:mt-0 ${
               !currentDriver.isOnline ? 'bg-slate-200 text-slate-600' : isHighPrecision ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'
             }`}>
               <Radio className="w-4 h-4 animate-pulse" />
             </div>
 
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm">Background GPS Safety Mode:</span>
-                <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] uppercase ${
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
+                <span className="font-bold text-sm shrink-0">Background GPS Safety Mode:</span>
+                <span className={`inline-block px-2 py-0.5 rounded font-mono font-bold text-[10px] uppercase break-words leading-normal ${
                   !currentDriver.isOnline
                     ? 'bg-slate-200 text-slate-700'
                     : isHighPrecision
@@ -232,7 +232,7 @@ export const DriverView: React.FC = () => {
                     : 'State 2: Looking for Orders (Distance-Based 50m / 30s Filter)'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-600 mt-0.5">
+              <p className="text-[11px] text-slate-600 mt-1">
                 {!currentDriver.isOnline 
                   ? 'Zero location tracking to ensure 100% user privacy and 0% battery consumption.'
                   : isHighPrecision
@@ -244,7 +244,7 @@ export const DriverView: React.FC = () => {
 
           <button
             onClick={() => setShowSpecSheet(!showSpecSheet)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shrink-0"
+            className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shrink-0 self-start sm:self-auto"
           >
             <FileCode className="w-3.5 h-3.5 text-indigo-600" />
             <span>OS Consent Triggers (iOS &amp; Android Spec)</span>
@@ -286,11 +286,11 @@ export const DriverView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs font-semibold overflow-x-auto">
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2 text-xs font-semibold overflow-x-auto scrollbar-none flex-nowrap -mx-2 px-2 sm:mx-0 sm:px-0">
         <button
           onClick={() => setActiveTab('cockpit')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'cockpit' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+            activeTab === 'cockpit' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <Navigation className="w-3.5 h-3.5" />
@@ -299,8 +299,8 @@ export const DriverView: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('route_optimizer')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'route_optimizer' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+            activeTab === 'route_optimizer' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
@@ -312,8 +312,8 @@ export const DriverView: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('analytics')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'analytics' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+            activeTab === 'analytics' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <Activity className="w-3.5 h-3.5 text-indigo-400" />
@@ -346,7 +346,7 @@ export const DriverView: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('route_optimizer')}
-              className="px-3.5 py-1.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs rounded-lg shrink-0 transition-colors shadow-xs flex items-center gap-1.5"
+              className="px-3.5 py-1.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs rounded-lg shrink-0 transition-colors shadow-xs flex items-center justify-center gap-1.5 self-start sm:self-auto"
             >
               <span>Optimize Multi-Stop Route</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -358,14 +358,14 @@ export const DriverView: React.FC = () => {
           {/* Left Column: Live Map Navigation */}
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-              <div className="flex items-center justify-between mb-3 text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3 text-xs">
                 <span className="font-bold text-slate-900 flex items-center gap-1.5">
                   <Navigation className="w-3.5 h-3.5 text-indigo-600" />
                   Real-Time GPS Tracking Map ({config.activeCityName})
                 </span>
                 
                 {/* Simulated Movement Trigger Buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-start sm:self-auto">
                   <button
                     onClick={simulateDriverStep}
                     className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded font-semibold text-[11px] flex items-center gap-1"

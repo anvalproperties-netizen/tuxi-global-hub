@@ -1,9 +1,13 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { defineConfig, Plugin } from 'vite';
-import { processAILocationDetection } from './src/utils/aiLocationProcessor';
-import { processAIVoiceSearch } from './src/utils/aiVoiceSearchProcessor';
+import { processAILocationDetection } from './src/utils/aiLocationProcessor.ts';
+import { processAIVoiceSearch } from './src/utils/aiVoiceSearchProcessor.ts';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function aiDevMiddlewarePlugin(): Plugin {
   return {
@@ -79,9 +83,10 @@ export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss(), aiDevMiddlewarePlugin()],
     resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
+      alias: [
+        { find: /^@\/(.*)/, replacement: path.resolve(__dirname, './$1') },
+        { find: '@', replacement: path.resolve(__dirname, '.') }
+      ],
     },
     server: {
       host: '0.0.0.0',

@@ -90,47 +90,47 @@ export const EatsOwnerView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-x-hidden">
       
       {/* Restaurant Header & Status Switcher */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xl">
-            <ChefHat className="w-8 h-8" />
+      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xl shrink-0">
+            <ChefHat className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">{myRestaurant.name}</h1>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{myRestaurant.name}</h1>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                 {myRestaurant.status}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">{myRestaurant.category} · {myRestaurant.address}</p>
+            <p className="text-xs text-slate-500 mt-1 truncate">{myRestaurant.category} · {myRestaurant.address}</p>
           </div>
         </div>
 
         {/* Kitchen Status Toggle */}
-        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+        <div className="flex items-center gap-1 sm:gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold w-full sm:w-auto justify-between sm:justify-start shrink-0">
           <button
             onClick={() => setStoreStatus('open')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
-              storeStatus === 'open' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600'
+            className={`flex-1 sm:flex-initial py-2 sm:py-1.5 px-2.5 sm:px-3 rounded-lg transition-colors text-center shrink-0 min-h-[36px] text-[11px] sm:text-xs ${
+              storeStatus === 'open' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Kitchen Open
           </button>
           <button
             onClick={() => setStoreStatus('busy')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
-              storeStatus === 'busy' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600'
+            className={`flex-1 sm:flex-initial py-2 sm:py-1.5 px-2.5 sm:px-3 rounded-lg transition-colors text-center shrink-0 min-h-[36px] text-[11px] sm:text-xs ${
+              storeStatus === 'busy' ? 'bg-amber-500 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Busy (+15m)
           </button>
           <button
             onClick={() => setStoreStatus('closed')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
-              storeStatus === 'closed' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600'
+            className={`flex-1 sm:flex-initial py-2 sm:py-1.5 px-2.5 sm:px-3 rounded-lg transition-colors text-center shrink-0 min-h-[36px] text-[11px] sm:text-xs ${
+              storeStatus === 'closed' ? 'bg-rose-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Paused
@@ -139,50 +139,52 @@ export const EatsOwnerView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs font-semibold">
-        <button
-          onClick={() => setActiveTab('live_orders')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
-            activeTab === 'live_orders' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <ChefHat className="w-3.5 h-3.5" />
-          <span>Live Kitchen Orders ({liveKitchenOrders.length})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('menu_editor')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
-            activeTab === 'menu_editor' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          <span>Menu Items &amp; Availability</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('pos_integration')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
-            activeTab === 'pos_integration' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Cpu className="w-3.5 h-3.5 text-indigo-400" />
-          <span>POS Integration &amp; KDS</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
-            activeTab === 'analytics' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>Sales &amp; Payouts</span>
-        </button>
+      <div className="overflow-x-auto scrollbar-none pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2 text-xs font-semibold min-w-max">
+          <button
+            onClick={() => setActiveTab('live_orders')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'live_orders' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ChefHat className="w-3.5 h-3.5" />
+            <span>Live Kitchen Orders ({liveKitchenOrders.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('menu_editor')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'menu_editor' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Menu Items &amp; Availability</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('pos_integration')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'pos_integration' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+            <span>POS Integration &amp; KDS</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'analytics' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Sales &amp; Payouts</span>
+          </button>
+        </div>
       </div>
 
       {/* TAB 1: LIVE KITCHEN ORDERS */}
       {activeTab === 'live_orders' && (
         <div className="space-y-4">
           {liveKitchenOrders.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-xs space-y-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-8 sm:p-12 text-center text-xs space-y-2">
               <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
               <h3 className="font-bold text-slate-800 text-sm">Kitchen Queue is Clear</h3>
               <p className="text-slate-500">New customer orders placed on TUXI Eats will chime and display here instantly.</p>
@@ -190,7 +192,7 @@ export const EatsOwnerView: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {liveKitchenOrders.map(order => (
-                <div key={order.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4 text-xs">
+                <div key={order.id} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs space-y-4 text-xs">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
                       <span className="font-mono text-[10px] text-indigo-600 font-bold uppercase">
@@ -206,8 +208,8 @@ export const EatsOwnerView: React.FC = () => {
                   {/* Items to cook */}
                   <div className="space-y-2">
                     {order.items.map(item => (
-                      <div key={item.id} className="flex justify-between items-start">
-                        <div>
+                      <div key={item.id} className="flex justify-between items-start gap-2">
+                        <div className="min-w-0">
                           <span className="font-bold text-slate-800">{item.quantity}x {item.name}</span>
                           {item.selectedOptions && (
                             <span className="block text-[11px] text-indigo-600 font-medium">
@@ -215,7 +217,7 @@ export const EatsOwnerView: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <span className="font-mono text-slate-600">
+                        <span className="font-mono text-slate-600 shrink-0">
                           {config.currencySymbol}{(item.price * item.quantity).toFixed(2)}
                         </span>
                       </div>
@@ -229,18 +231,18 @@ export const EatsOwnerView: React.FC = () => {
                   )}
 
                   {/* Prep Actions */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <div className="pt-2 border-t border-slate-100">
                     {order.status === 'placed' && (
                       <div className="flex items-center gap-2 w-full">
                         <button
                           onClick={() => handleAcceptOrder(order.id, 15)}
-                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs"
+                          className="flex-1 py-2 sm:py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors min-h-[38px]"
                         >
                           Accept (15m)
                         </button>
                         <button
                           onClick={() => handleAcceptOrder(order.id, 25)}
-                          className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs"
+                          className="flex-1 py-2 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition-colors min-h-[38px]"
                         >
                           Accept (25m)
                         </button>
@@ -250,7 +252,7 @@ export const EatsOwnerView: React.FC = () => {
                     {order.status === 'preparing' && (
                       <button
                         onClick={() => handleMarkReady(order.id)}
-                        className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5"
+                        className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors min-h-[40px]"
                       >
                         <ChefHat className="w-4 h-4 text-emerald-400" />
                         <span>Mark Ready for Driver Pickup</span>
@@ -258,7 +260,7 @@ export const EatsOwnerView: React.FC = () => {
                     )}
 
                     {order.status === 'ready' && (
-                      <div className="w-full text-center py-2 bg-slate-100 text-slate-600 rounded-lg font-medium">
+                      <div className="w-full text-center py-2.5 bg-slate-100 text-slate-600 rounded-lg font-medium">
                         Waiting for assigned courier arrival
                       </div>
                     )}
@@ -272,7 +274,7 @@ export const EatsOwnerView: React.FC = () => {
 
       {/* TAB 2: MENU EDITOR & AVAILABILITY */}
       {activeTab === 'menu_editor' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-base font-bold text-slate-900">Menu Catalog &amp; 86-Item Quick Switch</h2>
@@ -282,9 +284,9 @@ export const EatsOwnerView: React.FC = () => {
 
           <div className="space-y-3">
             {myRestaurant.menuItems?.map(item => (
-              <div key={item.id} className="p-3 border border-slate-200 rounded-xl flex items-center justify-between gap-4 text-xs">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
+              <div key={item.id} className="p-3 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 text-xs">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <span className="font-bold text-slate-900 text-sm">{item.name}</span>
                     <span className="text-slate-400">·</span>
                     <span className="text-slate-500 font-medium">{item.category}</span>
@@ -292,13 +294,13 @@ export const EatsOwnerView: React.FC = () => {
                   <p className="text-slate-500 text-[11px] mt-0.5">{item.description}</p>
                 </div>
 
-                <div className="flex items-center gap-4 shrink-0">
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                   <span className="font-bold text-slate-900 tabular-nums">
                     {config.currencySymbol}{item.price.toFixed(2)}
                   </span>
                   <button
                     onClick={() => handleToggleItemAvailability(item.id)}
-                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors min-h-[36px] min-w-[105px] text-center ${
                       item.isAvailable
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                         : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
@@ -315,13 +317,13 @@ export const EatsOwnerView: React.FC = () => {
 
       {/* TAB: POS INTEGRATION SERVICE & KDS */}
       {activeTab === 'pos_integration' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           
           {/* Header Card */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-indigo-600" />
+                <Cpu className="w-5 h-5 text-indigo-600 shrink-0" />
                 <h2 className="text-base font-bold text-slate-900">Eats Kitchen POS &amp; KDS Integration Service</h2>
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -329,7 +331,7 @@ export const EatsOwnerView: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 self-start md:self-auto shrink-0">
               <span className="text-xs font-semibold text-slate-500">Live Webhook:</span>
               <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-mono font-bold">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -340,16 +342,16 @@ export const EatsOwnerView: React.FC = () => {
 
           {posSyncFeedback && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
-              <Check className="w-4 h-4 text-emerald-600" />
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{posSyncFeedback}</span>
             </div>
           )}
 
           {/* Configuration Form */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             
             {/* Left: POS Configuration */}
-            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-5 text-xs">
+            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-5 text-xs">
               <div className="border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-bold text-slate-900">POS Provider &amp; API Credentials</h3>
                 <p className="text-slate-500">Select your in-store POS hardware or cloud back-office.</p>
@@ -390,7 +392,7 @@ export const EatsOwnerView: React.FC = () => {
                 })}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">POS Merchant / Franchise ID</label>
                   <input
@@ -415,7 +417,7 @@ export const EatsOwnerView: React.FC = () => {
               <div className="space-y-3 pt-3 border-t border-slate-100">
                 <h4 className="font-bold text-slate-900 text-xs">Real-Time POS Automation Engines:</h4>
                 
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-start gap-2.5">
                     <Printer className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
@@ -425,12 +427,12 @@ export const EatsOwnerView: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800">
+                  <span className="self-start sm:self-auto px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 shrink-0">
                     ENABLED
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-start gap-2.5">
                     <Radio className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
                     <div>
@@ -440,7 +442,7 @@ export const EatsOwnerView: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800">
+                  <span className="self-start sm:self-auto px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 shrink-0">
                     ENABLED
                   </span>
                 </div>
@@ -448,7 +450,7 @@ export const EatsOwnerView: React.FC = () => {
             </div>
 
             {/* Right: Sync Status & Actions */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col justify-between text-xs space-y-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs flex flex-col justify-between text-xs space-y-4">
               <div>
                 <span className="text-[10px] font-mono uppercase font-bold text-indigo-600 block mb-1">
                   POS Sync Operations
@@ -479,7 +481,7 @@ export const EatsOwnerView: React.FC = () => {
                 <button
                   onClick={handleRunPOSSync}
                   disabled={isSyncing}
-                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 min-h-[40px]"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
                   <span>{isSyncing ? 'Syncing POS Catalog...' : 'Sync Catalog from POS Now'}</span>
@@ -493,11 +495,11 @@ export const EatsOwnerView: React.FC = () => {
           </div>
 
           {/* Mapped POS Items Preview Table */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-3 text-xs">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-3 text-xs">
             <h3 className="text-sm font-bold text-slate-900">Live POS Item Mapping &amp; External IDs</h3>
             <div className="divide-y divide-slate-100">
               {myRestaurant.menuItems?.map(item => (
-                <div key={item.id} className="py-2.5 flex items-center justify-between">
+                <div key={item.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4">
                   <div>
                     <span className="font-bold text-slate-900">{item.name}</span>
                     <span className="text-slate-400 text-[11px] ml-2 font-mono">
@@ -505,7 +507,7 @@ export const EatsOwnerView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                     <span className="font-mono font-bold text-slate-800">
                       {config.currencySymbol}{item.price.toFixed(2)}
                     </span>
@@ -523,13 +525,13 @@ export const EatsOwnerView: React.FC = () => {
         </div>
       )}
       {activeTab === 'analytics' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-6">
           <div className="border-b border-slate-100 pb-3">
             <h2 className="text-base font-bold text-slate-900">Merchant Financial Summary</h2>
             <p className="text-xs text-slate-500 mt-0.5">Automated settlement every Tuesday direct to business bank account.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs">
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
               <span className="text-slate-500 font-medium block">Total YTD Sales</span>
               <span className="text-2xl font-black text-slate-900 tabular-nums block mt-1">

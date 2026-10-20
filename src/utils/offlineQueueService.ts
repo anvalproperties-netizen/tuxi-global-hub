@@ -14,7 +14,6 @@ export interface OfflineOrderInquiry {
 }
 
 const STORAGE_KEY = 'tuxi_offline_order_inquiries';
-const SIMULATED_OFFLINE_KEY = 'tuxi_simulated_offline';
 
 // Event listeners
 type QueueListener = (queue: OfflineOrderInquiry[]) => void;
@@ -23,26 +22,7 @@ type ConnectivityListener = (isOnline: boolean) => void;
 const queueListeners = new Set<QueueListener>();
 const connectivityListeners = new Set<ConnectivityListener>();
 
-// Initial simulated state
-let simulatedOffline = localStorage.getItem(SIMULATED_OFFLINE_KEY) === 'true';
-
-export function getSimulatedOffline(): boolean {
-  return simulatedOffline;
-}
-
-export function setSimulatedOffline(val: boolean) {
-  simulatedOffline = val;
-  localStorage.setItem(SIMULATED_OFFLINE_KEY, val ? 'true' : 'false');
-  notifyConnectivityListeners();
-
-  // If switched back online, automatically trigger synchronization!
-  if (!val) {
-    syncOfflineInquiries();
-  }
-}
-
 export function isDeviceOnline(): boolean {
-  if (simulatedOffline) return false;
   return typeof navigator !== 'undefined' ? navigator.onLine : true;
 }
 

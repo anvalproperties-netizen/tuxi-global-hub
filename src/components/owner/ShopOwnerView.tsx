@@ -97,28 +97,28 @@ export const ShopOwnerView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-x-hidden">
       
       {/* Shop Header */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xl">
-            <Store className="w-8 h-8" />
+      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xl shrink-0">
+            <Store className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">{myShop.name}</h1>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{myShop.name}</h1>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                 {myShop.status}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">{myShop.category} · {myShop.address}</p>
+            <p className="text-xs text-slate-500 mt-1 truncate">{myShop.category} · {myShop.address}</p>
           </div>
         </div>
 
-        <div className="text-right">
+        <div className="text-left md:text-right shrink-0 pt-1 md:pt-0 border-t md:border-t-0 border-slate-100">
           <span className="text-xs text-slate-400 block">Inventory SKUs</span>
-          <span className="text-lg font-bold text-slate-900 font-mono">
+          <span className="text-base sm:text-lg font-bold text-slate-900 font-mono">
             {myShop.products?.length || 0} Products Listed
           </span>
         </div>
@@ -126,30 +126,30 @@ export const ShopOwnerView: React.FC = () => {
 
       {/* Automated AI Stock Alert Notification Banner */}
       {criticalAlertsCount > 0 && activeTab !== 'smart_restock' && (
-        <div className="p-4 bg-gradient-to-r from-rose-950 via-slate-900 to-rose-950 border border-rose-600/50 rounded-2xl text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md animate-fade-in">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-rose-600 text-white shadow-xs animate-pulse shrink-0">
+        <div className="p-3.5 sm:p-4 bg-gradient-to-r from-rose-950 via-slate-900 to-rose-950 border border-rose-600/50 rounded-2xl text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md animate-fade-in">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-rose-600 text-white shadow-xs animate-pulse shrink-0 mt-0.5 sm:mt-0">
               <AlertTriangle className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="font-bold text-xs sm:text-sm">
                   AI Inventory Alert: {criticalAlertsCount} popular item{criticalAlertsCount > 1 ? 's' : ''} below replenishment threshold
                 </span>
-                <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase bg-rose-500/30 text-rose-300 border border-rose-500/40">
+                <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase bg-rose-500/30 text-rose-300 border border-rose-500/40 shrink-0">
                   STOCKOUT RISK
                 </span>
               </div>
-              <p className="text-[11px] text-slate-300 mt-0.5">
+              <p className="text-[11px] text-slate-300 mt-0.5 leading-tight">
                 Current sales velocity projects stockouts within 6 hours. AI has generated optimized supplier purchase orders ready for one-click approval.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
             <button
               onClick={() => setActiveTab('smart_restock')}
-              className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+              className="w-full sm:w-auto px-3.5 py-2 sm:py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 min-h-[38px]"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Review AI Restocks ({restockAlerts.length})</span>
@@ -159,66 +159,68 @@ export const ShopOwnerView: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs font-semibold overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('pick_pack')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'pick_pack' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Package className="w-3.5 h-3.5" />
-          <span>Picking &amp; Packing ({liveShopOrders.length})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('smart_restock')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'smart_restock' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          <span>AI Smart Restock</span>
-          {restockAlerts.length > 0 && (
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-              criticalAlertsCount > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-100 text-amber-800'
-            }`}>
-              {restockAlerts.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('inventory')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'inventory' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Tag className="w-3.5 h-3.5" />
-          <span>Product Catalog &amp; Stock</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('pos_integration')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
-            activeTab === 'pos_integration' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Cpu className="w-3.5 h-3.5 text-indigo-400" />
-          <span>POS Integration &amp; Inventory</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('finances')}
-          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
-            activeTab === 'finances' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <BarChart2 className="w-3.5 h-3.5" />
-          <span>Store Revenue</span>
-        </button>
+      <div className="overflow-x-auto scrollbar-none pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2 text-xs font-semibold min-w-max">
+          <button
+            onClick={() => setActiveTab('pick_pack')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'pick_pack' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span>Picking &amp; Packing ({liveShopOrders.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('smart_restock')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'smart_restock' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>AI Smart Restock</span>
+            {restockAlerts.length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                criticalAlertsCount > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-100 text-amber-800'
+              }`}>
+                {restockAlerts.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'inventory' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Tag className="w-3.5 h-3.5" />
+            <span>Product Catalog &amp; Stock</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('pos_integration')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'pos_integration' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+            <span>POS Integration &amp; Inventory</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('finances')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px] ${
+              activeTab === 'finances' ? 'bg-slate-900 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>Store Revenue</span>
+          </button>
+        </div>
       </div>
 
       {/* TAB 1: PICKING & PACKING */}
       {activeTab === 'pick_pack' && (
         <div className="space-y-4">
           {liveShopOrders.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-xs space-y-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-8 sm:p-12 text-center text-xs space-y-2">
               <Package className="w-10 h-10 text-slate-300 mx-auto" />
               <h3 className="font-bold text-slate-800 text-sm">Packing Queue is Empty</h3>
               <p className="text-slate-500">Retail grocery orders will arrive here with item-by-item checklists.</p>
@@ -226,7 +228,7 @@ export const ShopOwnerView: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {liveShopOrders.map(order => (
-                <div key={order.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4 text-xs">
+                <div key={order.id} className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs space-y-4 text-xs">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
                       <span className="font-mono text-[10px] text-indigo-600 font-bold uppercase">
@@ -248,21 +250,21 @@ export const ShopOwnerView: React.FC = () => {
                         <div
                           key={item.id}
                           onClick={() => toggleItemPacked(item.id)}
-                          className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${
+                          className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition-colors gap-2 min-h-[44px] ${
                             isPacked
                               ? 'bg-emerald-50/60 border-emerald-300 text-emerald-900 line-through'
-                              : 'bg-slate-50 border-slate-200 text-slate-800'
+                              : 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100'
                           }`}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             {isPacked ? (
-                              <CheckSquare className="w-4 h-4 text-emerald-600" />
+                              <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
                             ) : (
-                              <Square className="w-4 h-4 text-slate-400" />
+                              <Square className="w-4 h-4 text-slate-400 shrink-0" />
                             )}
-                            <span className="font-semibold">{item.quantity}x {item.name}</span>
+                            <span className="font-semibold truncate">{item.quantity}x {item.name}</span>
                           </div>
-                          <span className="font-mono text-[11px] text-slate-500">
+                          <span className="font-mono text-[11px] text-slate-500 shrink-0">
                             {config.currencySymbol}{(item.price * item.quantity).toFixed(2)}
                           </span>
                         </div>
@@ -274,7 +276,7 @@ export const ShopOwnerView: React.FC = () => {
                   <div className="pt-2 border-t border-slate-100">
                     <button
                       onClick={() => handleMarkPackedReady(order.id)}
-                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-2 shadow-xs"
+                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-2 shadow-xs min-h-[42px] transition-colors"
                     >
                       <Check className="w-4 h-4 text-emerald-400" />
                       <span>Bag Sealed &amp; Ready for Courier</span>
@@ -289,7 +291,7 @@ export const ShopOwnerView: React.FC = () => {
 
       {/* TAB 2: INVENTORY & STOCK */}
       {activeTab === 'inventory' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-base font-bold text-slate-900">Inventory Stock &amp; Pricing Management</h2>
@@ -299,9 +301,9 @@ export const ShopOwnerView: React.FC = () => {
 
           <div className="space-y-3">
             {myShop.products?.map(prod => (
-              <div key={prod.id} className="p-3 border border-slate-200 rounded-xl flex items-center justify-between gap-4 text-xs">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
+              <div key={prod.id} className="p-3 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 text-xs">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <span className="font-bold text-slate-900 text-sm">{prod.name}</span>
                     <span className="text-slate-400">·</span>
                     <span className="font-mono text-[10px] text-slate-500">SKU: {prod.sku}</span>
@@ -309,23 +311,23 @@ export const ShopOwnerView: React.FC = () => {
                   <p className="text-slate-500 text-[11px] mt-0.5">{prod.description}</p>
                 </div>
 
-                <div className="flex items-center gap-4 shrink-0">
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                   <span className="font-bold text-slate-900 tabular-nums text-sm">
                     {config.currencySymbol}{prod.price.toFixed(2)}
                   </span>
 
-                  <div className="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded-lg">
+                  <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg">
                     <span className="text-[10px] text-slate-500 uppercase font-semibold">Stock:</span>
                     <button
                       onClick={() => handleUpdateStock(prod.id, prod.stock - 1)}
-                      className="w-5 h-5 bg-white rounded border border-slate-200 text-slate-700 font-bold"
+                      className="w-6 h-6 flex items-center justify-center bg-white rounded border border-slate-200 text-slate-700 font-bold active:bg-slate-200 text-xs shadow-2xs"
                     >
                       -
                     </button>
                     <span className="w-6 text-center font-mono font-bold text-slate-900">{prod.stock}</span>
                     <button
                       onClick={() => handleUpdateStock(prod.id, prod.stock + 1)}
-                      className="w-5 h-5 bg-white rounded border border-slate-200 text-slate-700 font-bold"
+                      className="w-6 h-6 flex items-center justify-center bg-white rounded border border-slate-200 text-slate-700 font-bold active:bg-slate-200 text-xs shadow-2xs"
                     >
                       +
                     </button>
@@ -348,13 +350,13 @@ export const ShopOwnerView: React.FC = () => {
 
       {/* TAB: POS INTEGRATION & LIVE RETAIL INVENTORY */}
       {activeTab === 'pos_integration' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           
           {/* Header Card */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-indigo-600" />
+                <Cpu className="w-5 h-5 text-indigo-600 shrink-0" />
                 <h2 className="text-base font-bold text-slate-900">Retail Grocery &amp; Shop POS Integration Service</h2>
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -362,7 +364,7 @@ export const ShopOwnerView: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 self-start md:self-auto shrink-0">
               <span className="text-xs font-semibold text-slate-500">POS Stream:</span>
               <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-mono font-bold">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -373,15 +375,15 @@ export const ShopOwnerView: React.FC = () => {
 
           {posSyncFeedback && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
-              <Check className="w-4 h-4 text-emerald-600" />
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{posSyncFeedback}</span>
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             
             {/* Left: POS Hardware Provider */}
-            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-5 text-xs">
+            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-5 text-xs">
               <div className="border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-bold text-slate-900">Retail POS Terminal Bridge</h3>
                 <p className="text-slate-500">Select your retail scanner &amp; till software.</p>
@@ -421,7 +423,7 @@ export const ShopOwnerView: React.FC = () => {
                 })}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Merchant Store ID</label>
                   <input
@@ -446,7 +448,7 @@ export const ShopOwnerView: React.FC = () => {
               <div className="space-y-3 pt-3 border-t border-slate-100">
                 <h4 className="font-bold text-slate-900 text-xs">Retail Automation Directives:</h4>
                 
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-start gap-2.5">
                     <Barcode className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
@@ -456,12 +458,12 @@ export const ShopOwnerView: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800">
+                  <span className="self-start sm:self-auto px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 shrink-0">
                     REAL-TIME
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-start gap-2.5">
                     <Radio className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
@@ -471,7 +473,7 @@ export const ShopOwnerView: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800">
+                  <span className="self-start sm:self-auto px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 shrink-0">
                     ACTIVE
                   </span>
                 </div>
@@ -479,7 +481,7 @@ export const ShopOwnerView: React.FC = () => {
             </div>
 
             {/* Right: Sync Status & Actions */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col justify-between text-xs space-y-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs flex flex-col justify-between text-xs space-y-4">
               <div>
                 <span className="text-[10px] font-mono uppercase font-bold text-indigo-600 block mb-1">
                   Inventory Sync Status
@@ -512,7 +514,7 @@ export const ShopOwnerView: React.FC = () => {
                 <button
                   onClick={handleRunPOSSync}
                   disabled={isSyncing}
-                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 min-h-[40px]"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
                   <span>{isSyncing ? 'Syncing Barcodes...' : 'Sync Catalog from POS Now'}</span>
@@ -526,11 +528,11 @@ export const ShopOwnerView: React.FC = () => {
           </div>
 
           {/* Mapped POS Items Preview Table */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-3 text-xs">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-3 text-xs">
             <h3 className="text-sm font-bold text-slate-900">Mapped Barcodes &amp; Store Till SKUs</h3>
             <div className="divide-y divide-slate-100">
               {myShop.products?.map(prod => (
-                <div key={prod.id} className="py-2.5 flex items-center justify-between">
+                <div key={prod.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4">
                   <div>
                     <span className="font-bold text-slate-900">{prod.name}</span>
                     <span className="text-slate-400 text-[11px] ml-2 font-mono">
@@ -538,7 +540,7 @@ export const ShopOwnerView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                     <span className="font-mono font-bold text-slate-800">
                       {config.currencySymbol}{prod.price.toFixed(2)}
                     </span>
@@ -556,13 +558,13 @@ export const ShopOwnerView: React.FC = () => {
 
       {/* TAB 3: FINANCES */}
       {activeTab === 'finances' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-6">
           <div className="border-b border-slate-100 pb-3">
             <h2 className="text-base font-bold text-slate-900">Retail Revenue &amp; Settlements</h2>
             <p className="text-xs text-slate-500 mt-0.5">Platform commission rate: {myShop.commissionRate}%.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs">
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
               <span className="text-slate-500 font-medium block">Total YTD Volume</span>
               <span className="text-2xl font-black text-slate-900 tabular-nums block mt-1">

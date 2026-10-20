@@ -302,34 +302,34 @@ export const AIInsightsDashboard: React.FC = () => {
     <div className="space-y-6 animate-fade-in text-slate-800">
       
       {/* Header Banner */}
-      <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-700/50 rounded-2xl text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-indigo-600 text-cyan-300 shadow-md border border-indigo-500/50">
-            <Sparkles className="w-6 h-6 animate-pulse" />
+      <div className="p-3.5 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-700/50 rounded-2xl text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-2.5 sm:p-3 rounded-2xl bg-indigo-600 text-cyan-300 shadow-md border border-indigo-500/50 shrink-0">
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
           </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-black tracking-tight">AI Insights &amp; Performance Telemetry</h2>
-              <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h2 className="text-base sm:text-lg font-black tracking-tight truncate">AI Insights &amp; Performance Telemetry</h2>
+              <span className="px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-bold uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 LIVE METRICS
               </span>
-              <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                 GEMINI 3.8 FLASH
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+            <p className="text-[11px] sm:text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
               Comprehensive analytics visualizing request frequency, latency efficiency, and operational ROI across Location Detection, Voice Search, and Route Optimization.
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {/* Timeframe Selector */}
           <div className="bg-slate-800/90 border border-slate-700 rounded-xl p-1 flex items-center gap-1 text-xs">
             <button
               onClick={() => setTimeframe('24h')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+              className={`px-2.5 py-1 min-h-[32px] rounded-lg font-bold transition-all cursor-pointer ${
                 timeframe === '24h' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -337,7 +337,7 @@ export const AIInsightsDashboard: React.FC = () => {
             </button>
             <button
               onClick={() => setTimeframe('7d')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+              className={`px-2.5 py-1 min-h-[32px] rounded-lg font-bold transition-all cursor-pointer ${
                 timeframe === '7d' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -345,7 +345,7 @@ export const AIInsightsDashboard: React.FC = () => {
             </button>
             <button
               onClick={() => setTimeframe('30d')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+              className={`px-2.5 py-1 min-h-[32px] rounded-lg font-bold transition-all cursor-pointer ${
                 timeframe === '30d' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -357,7 +357,7 @@ export const AIInsightsDashboard: React.FC = () => {
           <button
             onClick={handleRunLiveBenchmark}
             disabled={isBenchmarking}
-            className="px-3.5 py-2 bg-gradient-to-r from-cyan-400 to-indigo-400 hover:from-cyan-300 hover:to-indigo-300 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-2 min-h-[36px] bg-gradient-to-r from-cyan-400 to-indigo-400 hover:from-cyan-300 hover:to-indigo-300 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             title="Execute live benchmarking tests across all AI engines"
           >
             <Play className={`w-3.5 h-3.5 fill-slate-950 ${isBenchmarking ? 'animate-spin' : ''}`} />
@@ -368,18 +368,18 @@ export const AIInsightsDashboard: React.FC = () => {
 
       {/* Benchmark Live Feedback Card if run */}
       {benchmarkLogs && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-950 shadow-xs animate-fade-in space-y-2">
+        <div className="p-3.5 sm:p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-950 shadow-xs animate-fade-in space-y-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span className="font-bold text-xs">Live AI Benchmark Complete</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-bold text-xs truncate">Live AI Benchmark Complete</span>
             </div>
-            <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">
+            <span className="text-[9px] sm:text-[10px] font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold shrink-0">
               3/3 ENGINES OPERATIONAL
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
             {benchmarkLogs.map((log, idx) => (
               <div key={idx} className="p-2.5 bg-white rounded-xl border border-emerald-100 shadow-2xs">
                 <span className="font-bold text-slate-900 block truncate">{log.name}</span>
@@ -387,7 +387,7 @@ export const AIInsightsDashboard: React.FC = () => {
                   <span className="font-mono font-bold text-indigo-600">{log.latency} ms</span>
                   <span className="text-emerald-700 font-semibold">{log.status}</span>
                 </div>
-                <span className="text-[10px] text-slate-500 block mt-0.5">{log.efficiency}</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5 truncate">{log.efficiency}</span>
               </div>
             ))}
           </div>
@@ -395,29 +395,29 @@ export const AIInsightsDashboard: React.FC = () => {
       )}
 
       {/* Three Pillars: Location Detection, Voice Search, Route Optimization */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
         {efficiencyMetrics.map((item, idx) => {
           const Icon = item.icon;
           return (
             <div 
               key={idx}
-              className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-indigo-300 transition-all space-y-4"
+              className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between hover:border-indigo-300 transition-all space-y-4"
             >
               <div>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <div 
-                      className="p-2 rounded-xl text-white shadow-xs"
+                      className="p-2 rounded-xl text-white shadow-xs shrink-0"
                       style={{ backgroundColor: item.color }}
                     >
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div>
-                      <h3 className="font-bold text-xs text-slate-900">{item.engine}</h3>
-                      <span className="text-[10px] font-mono text-slate-400 block">{item.model}</span>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-xs text-slate-900 truncate">{item.engine}</h3>
+                      <span className="text-[10px] font-mono text-slate-400 block truncate">{item.model}</span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full shrink-0">
                     {item.totalVolume} reqs
                   </span>
                 </div>
@@ -429,17 +429,17 @@ export const AIInsightsDashboard: React.FC = () => {
 
               <div className="space-y-2 pt-3 border-t border-slate-100 text-xs">
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="text-[10px] text-slate-400 block font-medium">Efficiency Score</span>
-                    <span className="font-black text-slate-900 font-mono text-xs">{item.keyStat}</span>
+                  <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 min-w-0">
+                    <span className="text-[10px] text-slate-400 block font-medium truncate">Efficiency</span>
+                    <span className="font-black text-slate-900 font-mono text-xs truncate block">{item.keyStat}</span>
                   </div>
-                  <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="text-[10px] text-slate-400 block font-medium">Mean Response</span>
-                    <span className="font-black text-indigo-600 font-mono text-xs">{item.secondaryStat}</span>
+                  <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 min-w-0">
+                    <span className="text-[10px] text-slate-400 block font-medium truncate">Response</span>
+                    <span className="font-black text-indigo-600 font-mono text-xs truncate block">{item.secondaryStat}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg">
+                <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg">
                   <TrendingUp className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{item.savings}</span>
                 </div>
@@ -453,31 +453,31 @@ export const AIInsightsDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Chart 1: Request Frequency Trends Over Time (Span 2 cols) */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
-              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-indigo-600" />
-                <span>AI Request Frequency &amp; Volume Trends ({timeframe.toUpperCase()})</span>
+              <h3 className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="truncate">AI Request Frequency &amp; Volume Trends ({timeframe.toUpperCase()})</span>
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
                 Hourly throughput across Location Detection, Voice Search, and Route Optimization.
               </p>
             </div>
 
             {/* Filter Pills */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-semibold">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-[10px] sm:text-[11px] font-semibold overflow-x-auto scrollbar-none shrink-0 max-w-full">
               <button
                 onClick={() => setSelectedFilter('all')}
-                className={`px-2 py-0.5 rounded-lg transition-all ${
-                  selectedFilter === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                className={`px-2 py-1 min-h-[30px] rounded-lg transition-all shrink-0 cursor-pointer ${
+                  selectedFilter === 'all' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 Combined
               </button>
               <button
                 onClick={() => setSelectedFilter('routing')}
-                className={`px-2 py-0.5 rounded-lg transition-all ${
+                className={`px-2 py-1 min-h-[30px] rounded-lg transition-all shrink-0 cursor-pointer ${
                   selectedFilter === 'routing' ? 'bg-white text-cyan-700 shadow-2xs font-bold' : 'text-slate-500'
                 }`}
               >
@@ -485,7 +485,7 @@ export const AIInsightsDashboard: React.FC = () => {
               </button>
               <button
                 onClick={() => setSelectedFilter('voice')}
-                className={`px-2 py-0.5 rounded-lg transition-all ${
+                className={`px-2 py-1 min-h-[30px] rounded-lg transition-all shrink-0 cursor-pointer ${
                   selectedFilter === 'voice' ? 'bg-white text-purple-700 shadow-2xs font-bold' : 'text-slate-500'
                 }`}
               >
@@ -493,7 +493,7 @@ export const AIInsightsDashboard: React.FC = () => {
               </button>
               <button
                 onClick={() => setSelectedFilter('location')}
-                className={`px-2 py-0.5 rounded-lg transition-all ${
+                className={`px-2 py-1 min-h-[30px] rounded-lg transition-all shrink-0 cursor-pointer ${
                   selectedFilter === 'location' ? 'bg-white text-indigo-700 shadow-2xs font-bold' : 'text-slate-500'
                 }`}
               >
@@ -504,7 +504,7 @@ export const AIInsightsDashboard: React.FC = () => {
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={activeFrequencyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={activeFrequencyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRouting" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4}/>
@@ -520,10 +520,16 @@ export const AIInsightsDashboard: React.FC = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
-                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
+                <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
+                <YAxis 
+                  width={36}
+                  tick={{ fontSize: 10, fill: '#64748b' }} 
+                  stroke="#cbd5e1" 
+                  tickFormatter={(val: number) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : `${val}`}
+                />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px' }}
+                  allowEscapeViewBox={{ x: false, y: false }}
+                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px', maxWidth: '240px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                 
@@ -566,13 +572,13 @@ export const AIInsightsDashboard: React.FC = () => {
         </div>
 
         {/* Chart 2: Workload Distribution Donut (1 col) */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 overflow-hidden">
           <div className="border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-indigo-600" />
+            <h3 className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-indigo-600 shrink-0" />
               <span>Workload Allocation Share</span>
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
               Distribution of operational compute cycles.
             </p>
           </div>
@@ -584,8 +590,8 @@ export const AIInsightsDashboard: React.FC = () => {
                   data={workloadPieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={46}
-                  outerRadius={72}
+                  innerRadius={40}
+                  outerRadius={66}
                   paddingAngle={4}
                   dataKey="value"
                 >
@@ -594,20 +600,21 @@ export const AIInsightsDashboard: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip 
+                  allowEscapeViewBox={{ x: false, y: false }}
                   formatter={(val: any) => [`${val}%`, 'Workload Share']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px', maxWidth: '220px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
 
           {/* Custom Donut Legend */}
-          <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-100">
+          <div className="grid grid-cols-2 gap-2 text-[10px] sm:text-[11px] pt-1 border-t border-slate-100">
             {workloadPieData.map((item, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+              <div key={i} className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                 <span className="text-slate-600 truncate">{item.name}</span>
-                <span className="font-mono font-bold text-slate-900 ml-auto">{item.value}%</span>
+                <span className="font-mono font-bold text-slate-900 ml-auto shrink-0">{item.value}%</span>
               </div>
             ))}
           </div>
@@ -619,30 +626,48 @@ export const AIInsightsDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Latency Efficiency vs Target Benchmark Chart */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 overflow-hidden">
+          <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-indigo-600" />
+              <h3 className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span>Response Latency Efficiency (ms)</span>
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
                 Actual processing speed vs. maximum SLA target budget.
               </p>
             </div>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 self-start sm:self-auto shrink-0">
               100% UNDER SLA
             </span>
           </div>
 
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={latencyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={latencyComparisonData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
-                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" unit="ms" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 9, fill: '#64748b' }} 
+                  stroke="#cbd5e1" 
+                  interval={0}
+                  tickFormatter={(val: string) => {
+                    if (val.includes('Route')) return 'Routing';
+                    if (val.includes('Voice')) return 'Voice';
+                    if (val.includes('Location')) return 'Location';
+                    if (val.includes('Surge')) return 'Surge';
+                    return val;
+                  }}
+                />
+                <YAxis 
+                  width={34}
+                  tick={{ fontSize: 10, fill: '#64748b' }} 
+                  stroke="#cbd5e1" 
+                  unit="ms" 
+                />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px' }}
+                  allowEscapeViewBox={{ x: false, y: false }}
+                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px', maxWidth: '240px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                 <Bar dataKey="latencyMs" name="Actual Mean Latency" fill="#4f46e5" radius={[6, 6, 0, 0]} />
@@ -653,18 +678,18 @@ export const AIInsightsDashboard: React.FC = () => {
         </div>
 
         {/* Real-Time Live Telemetry Event Stream */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 overflow-hidden">
+          <div className="border-b border-slate-100 pb-3 flex items-center justify-between gap-2">
             <div>
-              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-indigo-600" />
+              <h3 className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span>Real-Time Request Telemetry Stream</span>
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
                 Streaming feed of autonomous AI executions &amp; efficiency yields.
               </p>
             </div>
-            <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-600 font-bold">
+            <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-600 font-bold shrink-0">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               LIVE
             </span>
@@ -674,9 +699,9 @@ export const AIInsightsDashboard: React.FC = () => {
             {telemetryEvents.map(event => (
               <div 
                 key={event.id}
-                className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-slate-200 transition-all flex items-center justify-between gap-3 text-xs"
+                className="p-2 sm:p-2.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-slate-200 transition-all flex items-center justify-between gap-2 sm:gap-3 text-xs"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                   <div className={`p-1.5 rounded-lg text-white shrink-0 ${
                     event.engine === 'location' ? 'bg-indigo-600' :
                     event.engine === 'voice' ? 'bg-purple-600' :
@@ -689,21 +714,21 @@ export const AIInsightsDashboard: React.FC = () => {
                   </div>
 
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-xs truncate">{event.label}</span>
-                      <span className="text-[10px] font-mono text-slate-400">{event.timestamp}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="font-bold text-slate-900 text-[11px] sm:text-xs truncate">{event.label}</span>
+                      <span className="text-[9px] sm:text-[10px] font-mono text-slate-400 shrink-0">{event.timestamp}</span>
                     </div>
-                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 truncate mt-0.5">
                       {event.details}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className="text-[11px] font-mono font-bold text-indigo-600 block">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold text-indigo-600 block">
                     {event.latencyMs}ms
                   </span>
-                  <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100 inline-block">
+                  <span className="text-[8px] sm:text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100 inline-block truncate max-w-[85px] sm:max-w-none">
                     {event.efficiencyGain}
                   </span>
                 </div>

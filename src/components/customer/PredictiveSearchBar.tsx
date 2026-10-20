@@ -21,7 +21,6 @@ import {
   Check, 
   Sparkles, 
   Store, 
-  Scan,
   Zap,
   Trash2
 } from 'lucide-react';
@@ -32,7 +31,6 @@ interface PredictiveSearchBarProps {
   activeTab: 'eats' | 'shop';
   onSelectBusiness: (biz: Business) => void;
   onAddItemToCart: (item: MenuItem | ProductItem, biz: Business) => void;
-  onOpenARPreview: (item: MenuItem | ProductItem, businessName: string) => void;
   previouslyViewedItems: PreviouslyViewedItem[];
   onClearViewedItems: () => void;
   className?: string;
@@ -52,7 +50,6 @@ export const PredictiveSearchBar: React.FC<PredictiveSearchBarProps> = ({
   activeTab,
   onSelectBusiness,
   onAddItemToCart,
-  onOpenARPreview,
   previouslyViewedItems,
   onClearViewedItems,
   className = ''
@@ -395,13 +392,6 @@ export const PredictiveSearchBar: React.FC<PredictiveSearchBarProps> = ({
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
-                            <button
-                              onClick={() => onOpenARPreview(item, business.name)}
-                              className="p-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 rounded-lg transition-colors"
-                              title="3D AR Tabletop Preview"
-                            >
-                              <Scan className="w-3.5 h-3.5" />
-                            </button>
                             <button
                               onClick={() => {
                                 onAddItemToCart(item, business);

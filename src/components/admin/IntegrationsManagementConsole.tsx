@@ -203,12 +203,12 @@ export const IntegrationsManagementConsole: React.FC = () => {
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
       {/* Console Header */}
-      <div className="p-6 bg-slate-900 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="p-4 sm:p-6 bg-slate-900 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <Server className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-lg font-bold">Phase 2G External Integrations &amp; Release Console</h2>
-            <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded font-mono border border-indigo-500/30">
+          <div className="flex flex-wrap items-center gap-2">
+            <Server className="w-5 h-5 text-indigo-400 shrink-0" />
+            <h2 className="text-base sm:text-lg font-bold">Phase 2G External Integrations &amp; Release Console</h2>
+            <span className="bg-indigo-500/20 text-indigo-300 text-[10px] sm:text-xs px-2 py-0.5 rounded font-mono border border-indigo-500/30">
               STRICT GATING ACTIVE
             </span>
           </div>
@@ -220,7 +220,7 @@ export const IntegrationsManagementConsole: React.FC = () => {
         <button
           onClick={runLiveHealthCheck}
           disabled={isRunningHealthCheck}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors self-start md:self-auto cursor-pointer disabled:opacity-50"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors w-full sm:w-auto self-start md:self-auto cursor-pointer disabled:opacity-50 min-h-[38px]"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isRunningHealthCheck ? 'animate-spin' : ''}`} />
           <span>{isRunningHealthCheck ? 'Verifying Connectivity...' : 'Run Provider Health Check'}</span>
@@ -228,17 +228,17 @@ export const IntegrationsManagementConsole: React.FC = () => {
       </div>
 
       {healthCheckStatusMessage && (
-        <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-2.5 text-xs text-emerald-800 flex items-center gap-2">
+        <div className="bg-emerald-50 border-b border-emerald-200 px-4 sm:px-6 py-2.5 text-xs text-emerald-800 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{healthCheckStatusMessage}</span>
         </div>
       )}
 
       {/* Sub Tabs */}
-      <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 gap-2 overflow-x-auto text-xs">
+      <div className="flex border-b border-slate-200 bg-slate-50 px-3 sm:px-6 pt-2.5 sm:pt-3 gap-2 sm:gap-4 overflow-x-auto text-xs scrollbar-none">
         <button
           onClick={() => setActiveSubTab('providers')}
-          className={`pb-3 font-semibold transition-colors flex items-center gap-1.5 border-b-2 px-1 ${
+          className={`pb-3 font-semibold transition-colors flex items-center gap-1.5 border-b-2 px-1 whitespace-nowrap shrink-0 ${
             activeSubTab === 'providers' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -405,19 +405,19 @@ export const IntegrationsManagementConsole: React.FC = () => {
 
       {/* Tab 3: Authoritative Payouts & Holds */}
       {activeSubTab === 'payouts' && (
-        <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-bold text-slate-900">Beneficiary Payout Ledgers &amp; Hold Governance</h3>
               <p className="text-xs text-slate-500">Dual-authorization approval required. All calculations originate from PostgreSQL ledgers.</p>
             </div>
-            <span className="bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded font-semibold border border-indigo-200">
+            <span className="bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded font-semibold border border-indigo-200 self-start sm:self-auto shrink-0">
               Min Threshold: R50.00
             </span>
           </div>
 
-          <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-            <table className="w-full text-left">
+          <div className="border border-slate-200 rounded-xl overflow-x-auto text-xs shadow-2xs">
+            <table className="w-full min-w-[620px] text-left">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
                 <tr>
                   <th className="p-3">Role</th>
@@ -456,6 +456,9 @@ export const IntegrationsManagementConsole: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <p className="text-[11px] text-slate-400 sm:hidden">
+            ⇄ Swipe horizontally to view full ledger, bank accounts &amp; hold details
+          </p>
         </div>
       )}
 
