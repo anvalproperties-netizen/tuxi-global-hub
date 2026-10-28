@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs';
+import bcrypt from 'bcryptjs';
 
 const DB_DIR = path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(DB_DIR)) {
@@ -342,6 +343,17 @@ export class TuxiDatabase {
         FOREIGN KEY (order_id) REFERENCES orders(id)
       );
 
+      CREATE TABLE IF NOT EXISTS payment_transactions (
+        id TEXT PRIMARY KEY,
+        payment_id TEXT NOT NULL,
+        transaction_type TEXT NOT NULL,
+        amount_cents INTEGER NOT NULL DEFAULT 0,
+        currency TEXT NOT NULL DEFAULT 'ZAR',
+        idempotency_key TEXT UNIQUE NOT NULL,
+        raw_response TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
       CREATE TABLE IF NOT EXISTS commission_rules (
         id TEXT PRIMARY KEY,
         rule_version INTEGER NOT NULL DEFAULT 1,
@@ -412,7 +424,144 @@ export class TuxiDatabase {
         response_body TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
+
+      -- Phase AUTH-1B.1 Security & Session Management Tables
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token_hash TEXT UNIQUE NOT NULL,
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        last_active_at TEXT NOT NULL DEFAULT (datetime('now')),
+        expires_at TEXT NOT NULL,
+        revoked_at TEXT,
+        revocation_reason TEXT,
+        CHECK (length(token_hash) = 64),
+        CHECK (datetime(created_at) IS NOT NULL),
+        CHECK (datetime(last_active_at) IS NOT NULL AND datetime(last_active_at) >= datetime(created_at)),
+        CHECK (datetime(expires_at) IS NOT NULL AND datetime(expires_at) > datetime(created_at)),
+        CHECK (revoked_at IS NULL OR (datetime(revoked_at) IS NOT NULL AND datetime(revoked_at) >= datetime(created_at))),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_sessions_user_active ON user_sessions(user_id) WHERE revoked_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
+
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token_hash TEXT UNIQUE NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        expires_at TEXT NOT NULL,
+        used_at TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        CHECK (length(token_hash) = 64),
+        CHECK (datetime(created_at) IS NOT NULL),
+        CHECK (datetime(expires_at) IS NOT NULL AND datetime(expires_at) > datetime(created_at)),
+        CHECK (used_at IS NULL OR (datetime(used_at) IS NOT NULL AND datetime(used_at) >= datetime(created_at))),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_password_reset_user_active ON password_reset_tokens(user_id) WHERE used_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_password_reset_expires_at ON password_reset_tokens(expires_at);
+
+      CREATE TABLE IF NOT EXISTS email_verification_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token_hash TEXT UNIQUE NOT NULL,
+        target_email TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        expires_at TEXT NOT NULL,
+        used_at TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        CHECK (length(token_hash) = 64),
+        CHECK (length(target_email) >= 5 AND target_email LIKE '%@%.%'),
+        CHECK (datetime(created_at) IS NOT NULL),
+        CHECK (datetime(expires_at) IS NOT NULL AND datetime(expires_at) > datetime(created_at)),
+        CHECK (used_at IS NULL OR (datetime(used_at) IS NOT NULL AND datetime(used_at) >= datetime(created_at))),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_email_verification_user_active ON email_verification_tokens(user_id) WHERE used_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_email_verification_expires_at ON email_verification_tokens(expires_at);
+
+      CREATE TABLE IF NOT EXISTS rate_limits (
+        rate_key TEXT NOT NULL,
+        action TEXT NOT NULL,
+        attempt_count INTEGER NOT NULL DEFAULT 1 CHECK (attempt_count >= 1),
+        first_attempt_at TEXT NOT NULL DEFAULT (datetime('now')),
+        last_attempt_at TEXT NOT NULL DEFAULT (datetime('now')),
+        window_expires_at TEXT NOT NULL,
+        locked_until TEXT,
+        PRIMARY KEY (action, rate_key),
+        CHECK (datetime(first_attempt_at) IS NOT NULL),
+        CHECK (datetime(last_attempt_at) IS NOT NULL AND datetime(last_attempt_at) >= datetime(first_attempt_at)),
+        CHECK (datetime(window_expires_at) IS NOT NULL AND datetime(window_expires_at) >= datetime(first_attempt_at)),
+        CHECK (locked_until IS NULL OR (datetime(locked_until) IS NOT NULL AND datetime(locked_until) >= datetime(first_attempt_at)))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_rate_limits_cleanup ON rate_limits(window_expires_at, locked_until);
+
+      -- Stage 1: Physical SKU Attributes & Append-Only Order Payload Assessments
+      CREATE TABLE IF NOT EXISTS order_payload_assessments (
+        id TEXT PRIMARY KEY,
+        order_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        assessment_status TEXT NOT NULL,
+        known_weight_grams INTEGER NOT NULL DEFAULT 0,
+        unknown_item_count INTEGER NOT NULL DEFAULT 0,
+        total_actual_weight_grams INTEGER,
+        max_length_cm REAL,
+        max_width_cm REAL,
+        max_height_cm REAL,
+        total_volume_cm3 REAL,
+        parcel_count INTEGER NOT NULL DEFAULT 1,
+        has_bulk_item INTEGER NOT NULL DEFAULT 0,
+        has_wholesale_item INTEGER NOT NULL DEFAULT 0,
+        has_unspecified_attributes INTEGER NOT NULL DEFAULT 0,
+        eligible_vehicle_classes TEXT NOT NULL DEFAULT '[]',
+        required_vehicle_class TEXT NOT NULL,
+        line_snapshots TEXT NOT NULL,
+        assessed_by_actor_id TEXT,
+        assessed_by_role TEXT NOT NULL DEFAULT 'SYSTEM',
+        amendment_reason TEXT,
+        evidence_notes TEXT,
+        previous_assessment_id TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT,
+        UNIQUE(order_id, version)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_order_payload_assessments_order_version 
+        ON order_payload_assessments(order_id, version DESC);
     `);
+
+    // Defensive PRAGMA migration for products physical columns
+    const prodCols = new Set((this.db.prepare("PRAGMA table_info(products);").all() as any[]).map(c => c.name));
+    if (!prodCols.has('weight_grams')) this.db.exec("ALTER TABLE products ADD COLUMN weight_grams INTEGER;");
+    if (!prodCols.has('length_cm')) this.db.exec("ALTER TABLE products ADD COLUMN length_cm REAL;");
+    if (!prodCols.has('width_cm')) this.db.exec("ALTER TABLE products ADD COLUMN width_cm REAL;");
+    if (!prodCols.has('height_cm')) this.db.exec("ALTER TABLE products ADD COLUMN height_cm REAL;");
+    if (!prodCols.has('is_bulk')) this.db.exec("ALTER TABLE products ADD COLUMN is_bulk INTEGER NOT NULL DEFAULT 0;");
+    if (!prodCols.has('is_wholesale')) this.db.exec("ALTER TABLE products ADD COLUMN is_wholesale INTEGER NOT NULL DEFAULT 0;");
+
+    // Defensive PRAGMA migration for driver_profiles capacity columns
+    const driverCols = new Set((this.db.prepare("PRAGMA table_info(driver_profiles);").all() as any[]).map(c => c.name));
+    if (!driverCols.has('verified_payload_kg')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN verified_payload_kg INTEGER;");
+    if (!driverCols.has('cargo_length_cm')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN cargo_length_cm REAL;");
+    if (!driverCols.has('cargo_width_cm')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN cargo_width_cm REAL;");
+    if (!driverCols.has('cargo_height_cm')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN cargo_height_cm REAL;");
+    if (!driverCols.has('capacity_verified_at')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_verified_at TEXT;");
+    if (!driverCols.has('capacity_verified_by')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_verified_by TEXT;");
+    if (!driverCols.has('capacity_certificate_id')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_certificate_id TEXT;");
+    if (!driverCols.has('capacity_evidence_doc_url')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_evidence_doc_url TEXT;");
+    if (!driverCols.has('capacity_expires_at')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_expires_at TEXT;");
+    if (!driverCols.has('capacity_revoked_at')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_revoked_at TEXT;");
+    if (!driverCols.has('capacity_revocation_reason')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_revocation_reason TEXT;");
+
 
     // Seed default current terms version for TUXI Rep if not exists
     const existingTerms = this.db.prepare("SELECT id FROM terms_versions WHERE target_role = 'TUXI_REP' AND is_current = 1").get();
@@ -437,6 +586,7 @@ export class TuxiDatabase {
         VALUES (?, 1, 'Standard TUXI Rep Qualifying Sales Rule', 'TUXI_REP', 0.025, datetime('now'), 1)
       `).run(ruleId);
     }
+
   }
 }
 

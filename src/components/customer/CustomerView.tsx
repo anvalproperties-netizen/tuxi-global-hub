@@ -15,9 +15,7 @@ import { AIChatAssistantWidget } from './AIChatAssistantWidget';
 import { OrderToastNotifications } from './OrderToastNotifications';
 import { GroupOrderModal } from './GroupOrderModal';
 import { PredictiveSearchBar } from './PredictiveSearchBar';
-import { DynamicPricingForecastCard } from './DynamicPricingForecastCard';
 import { AILocationIntelligenceModal } from '../common/AILocationIntelligenceModal';
-import { getDynamicPricingTelemetry, onDynamicPricingUpdate, DynamicPricingTelemetry } from '../../utils/dynamicPricingEngine';
 import { BiometricAuthModal } from '../common/BiometricAuthModal';
 import { BiometricSecurityManager } from './BiometricSecurityManager';
 import { getBiometricSettings } from '../../utils/biometricAuthService';
@@ -246,16 +244,6 @@ export const CustomerView: React.FC = () => {
   const cartBiz = businesses.find(b => b.id === cartBusinessId);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // Dynamic Pricing State & Real-Time Telemetry Subscription
-  const [pricingTelemetry, setPricingTelemetry] = useState<DynamicPricingTelemetry>(getDynamicPricingTelemetry());
-
-  useEffect(() => {
-    const unsub = onDynamicPricingUpdate(data => {
-      setPricingTelemetry(data);
-    });
-    return () => unsub();
-  }, []);
-
   // Biometric Authentication State
   const [showBiometricModal, setShowBiometricModal] = useState<boolean>(false);
   const [biometricVerifiedDetails, setBiometricVerifiedDetails] = useState<{
@@ -265,7 +253,8 @@ export const CustomerView: React.FC = () => {
     verifiedAt: string;
   } | null>(null);
 
-  const deliveryFee = (subtotal > 0 && !isPickup) ? pricingTelemetry.dynamicDeliveryFee : 0;
+  // Standard flat delivery fee (AI dynamic surge pricing removed)
+  const deliveryFee = (subtotal > 0 && !isPickup) ? 2.99 : 0;
   const serviceFee = subtotal > 0 ? 1.50 : 0;
   // 5% grocery service fee on Shop subtotals
   const groceryCustomerFee = (cartBiz?.type === 'shop' && subtotal > 0) 
@@ -662,9 +651,6 @@ export const CustomerView: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* AI Dynamic Pricing Real-Time Demand Engine & Visual Surge Forecast Chart */}
-      <DynamicPricingForecastCard className="mb-4" />
 
       {/* Live Order Active Google Maps Quick Tracking Banner */}
       {trackedOrder && trackedOrder.status !== 'delivered' && trackedOrder.status !== 'cancelled' && activeTab !== 'tracking' && (
@@ -1614,15 +1600,7 @@ export const CustomerView: React.FC = () => {
               </div>
               {!isPickup && (
                 <div className="flex justify-between text-slate-600">
-                  <span className="flex items-center gap-1.5">
-                    <span>Delivery Fee:</span>
-                    {pricingTelemetry.currentMultiplier > 1.05 && (
-                      <span className="px-1.5 py-0.2 rounded font-mono text-[9px] font-bold bg-amber-100 text-amber-800 flex items-center gap-0.5">
-                        <Zap className="w-2.5 h-2.5 fill-current" />
-                        <span>{pricingTelemetry.currentMultiplier.toFixed(2)}x Surge</span>
-                      </span>
-                    )}
-                  </span>
+                  <span>Delivery Fee:</span>
                   <span className="font-mono font-semibold text-slate-900">{formatPrice(deliveryFee)}</span>
                 </div>
               )}

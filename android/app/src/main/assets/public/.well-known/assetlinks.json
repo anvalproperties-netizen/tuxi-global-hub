@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.tuxi.marketplace.app",
+      "sha256_cert_fingerprints": [
+        "14:6D:E9:7F:0F:7B:A2:3E:9B:45:C3:7E:8A:2F:9C:12:34:56:78:9A:BC:DE:F0:12:34:56:78:9A:BC:DE:F0:12"
+      ]
+    }
+  }
+]

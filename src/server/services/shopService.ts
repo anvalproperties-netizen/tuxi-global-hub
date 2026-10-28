@@ -11,6 +11,12 @@ export interface ShopProductVariant {
   attributes: Record<string, any>;
   isAvailable: boolean;
   stockAvailable: number;
+  weightGrams?: number | null;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  isBulk?: boolean | null;
+  isWholesale?: boolean | null;
 }
 
 export interface ShopProduct {
@@ -27,6 +33,12 @@ export interface ShopProduct {
   isAvailable: boolean;
   imageUrl?: string | null;
   stockAvailable: number;
+  weightGrams?: number | null;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  isBulk: boolean;
+  isWholesale: boolean;
   variants: ShopProductVariant[];
 }
 

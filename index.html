@@ -26,8 +26,16 @@
     <script>
       (function() {
         try {
-          var saved = localStorage.getItem('tuxi_theme');
-          var isDark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var saved = null;
+          try {
+            saved = localStorage.getItem('tuxi_theme');
+          } catch (storageErr) {
+            // Storage access blocked or restricted; fail-safe to null
+            saved = null;
+          }
+          // Authoritative Rule: Default to Light Mode on first launch.
+          // Dark Mode activates ONLY if explicitly saved as 'dark' previously.
+          var isDark = saved === 'dark';
           if (isDark) {
             document.documentElement.classList.add('dark');
             document.documentElement.setAttribute('data-theme', 'dark');
@@ -35,7 +43,11 @@
             document.documentElement.classList.remove('dark');
             document.documentElement.setAttribute('data-theme', 'light');
           }
-        } catch (e) {}
+        } catch (e) {
+          // Absolute fail-safe: default to Light Mode
+          document.documentElement.classList.remove('dark');
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
       })();
     </script>
     <div id="root"></div>

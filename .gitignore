@@ -8,3 +8,5 @@ coverage/
 !.env.example
 data/
 .gmp_cache/
+.aistudio/
+.tempmediaStorage/

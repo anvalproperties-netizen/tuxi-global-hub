@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { postgresAdapter } from '../db/postgres.js';
 import { dbInstance } from '../db/database.js';
 import { CommissionService } from './commissionService.js';
+import { calculateOrderPayloadAssessment, OrderItemInput } from '../utils/payloadEvaluation.js';
 
 export interface BasketItemInput {
   itemType?: 'MENU_ITEM' | 'PRODUCT';
@@ -42,7 +43,11 @@ export interface RepriceBasketResult {
   tipCents: number;
   totalCents: number;
   currency: string;
+  deliveryQuotationAvailable?: boolean;
+  quotationUnavailableReason?: string;
+  payloadAssessment?: any;
 }
+
 
 export interface CreateOrderInput {
   customerId: string; // User ID of authenticated customer
@@ -93,6 +98,7 @@ export class OrderService {
         const bizType = bizRes.rows[0].type;
         let subtotalCents = 0;
         const repricedItems = [];
+        const orderPayloadItems: OrderItemInput[] = [];
 
         for (const item of input.items) {
           if (!item.quantity || item.quantity <= 0) {
@@ -104,7 +110,8 @@ export class OrderService {
             // SHOP PRODUCT & VARIANT REPRICING (PHASE 2B)
             // ==========================================
             const prodRes = await client.query(`
-              SELECT id, business_id, sku, name, price_cents, sale_price_cents, is_on_sale, is_available, is_active
+              SELECT id, business_id, sku, name, price_cents, sale_price_cents, is_on_sale, is_available, is_active,
+                     weight_grams, length_cm, width_cm, height_cm, is_bulk, is_wholesale
               FROM products
               WHERE id = $1;
             `, [item.itemId]);
@@ -129,10 +136,12 @@ export class OrderService {
             let itemSku = prod.sku;
             let itemName = prod.name;
             let variantAttrs = {};
+            let variantRow: any = null;
 
             if (item.variantId) {
               const varRes = await client.query(`
-                SELECT id, product_id, variant_sku, variant_name, price_delta_cents, sale_price_cents, attributes, is_available
+                SELECT id, product_id, variant_sku, variant_name, price_delta_cents, sale_price_cents, attributes, is_available,
+                       weight_grams, length_cm, width_cm, height_cm, is_bulk, is_wholesale
                 FROM product_variants
                 WHERE id = $1;
               `, [item.variantId]);
@@ -142,6 +151,7 @@ export class OrderService {
               }
 
               const variant = varRes.rows[0];
+              variantRow = variant;
 
               if (variant.product_id !== prod.id) {
                 throw new Error(`INVALID_VARIANT: Variant does not belong to product "${prod.name}"`);
@@ -165,6 +175,30 @@ export class OrderService {
             const lineTotalCents = effectiveUnitCents * item.quantity;
             subtotalCents += lineTotalCents;
 
+            orderPayloadItems.push({
+              itemId: prod.id,
+              variantId: item.variantId || null,
+              sku: itemSku,
+              name: itemName,
+              quantity: item.quantity,
+              product: {
+                weight_grams: prod.weight_grams,
+                length_cm: prod.length_cm,
+                width_cm: prod.width_cm,
+                height_cm: prod.height_cm,
+                is_bulk: Boolean(prod.is_bulk),
+                is_wholesale: Boolean(prod.is_wholesale)
+              },
+              variant: variantRow ? {
+                weight_grams: variantRow.weight_grams,
+                length_cm: variantRow.length_cm,
+                width_cm: variantRow.width_cm,
+                height_cm: variantRow.height_cm,
+                is_bulk: variantRow.is_bulk !== undefined && variantRow.is_bulk !== null ? Boolean(variantRow.is_bulk) : null,
+                is_wholesale: variantRow.is_wholesale !== undefined && variantRow.is_wholesale !== null ? Boolean(variantRow.is_wholesale) : null
+              } : null
+            });
+
             repricedItems.push({
               itemType: 'PRODUCT' as const,
               itemId: prod.id,
@@ -173,6 +207,7 @@ export class OrderService {
               itemName,
               unitPriceCents: effectiveUnitCents,
               basePriceCents: prod.price_cents,
+
               quantity: item.quantity,
               lineTotalCents,
               variantAttributes: variantAttrs,

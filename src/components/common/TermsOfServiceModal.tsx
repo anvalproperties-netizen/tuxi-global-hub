@@ -61,7 +61,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
             <ul className="list-disc pl-5 space-y-1 text-slate-600">
               <li><strong>Payment Authorizations:</strong> All orders are authorized and charged via PCI-DSS compliant payment tokens upon checkout confirmation or biometric passkey verification.</li>
               <li><strong>Group Orders:</strong> When participating in an automated group order session, each member authorizes charges according to the designated split mode (&quot;by items&quot;, &quot;equal split&quot;, or &quot;host pays&quot;).</li>
-              <li><strong>Pricing &amp; Dynamic Delivery Fees:</strong> Delivery fees are dynamically determined using real-time supply, demand, and traffic telemetry. Surge multipliers and service fees are visibly disclosed before payment authorization.</li>
+              <li><strong>Pricing &amp; Delivery Fees:</strong> Delivery fees and applicable service fees are visibly disclosed before payment authorization.</li>
             </ul>
           </section>
 

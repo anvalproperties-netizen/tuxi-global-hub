@@ -1,0 +1,98 @@
+{
+  "id": "com.tuxi.marketplace.app",
+  "name": "TUXI - AI-First Global Marketplace & Delivery",
+  "short_name": "TUXI",
+  "description": "Worldwide marketplace and delivery platform combining TUXI Eats, TUXI Shop, and TUXI Courier with real-time GPS order tracking and offline capabilities.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "lang": "en-US",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": ["shopping", "food", "lifestyle", "business", "productivity"],
+  "launch_handler": {
+    "client_mode": "auto"
+  },
+  "handle_links": "preferred",
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "share_target": {
+    "action": "/?tab=share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "TUXI Marketplace Desktop Cockpit"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "TUXI Mobile Order & Delivery Tracking"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "TUXI Eats",
+      "short_name": "Eats",
+      "description": "Order food from local restaurants",
+      "url": "/?tab=eats",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Track Deliveries",
+      "short_name": "Track",
+      "description": "Live GPS courier radar",
+      "url": "/?tab=tracking",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Driver Cockpit",
+      "short_name": "Driver",
+      "description": "Driver dispatch and route optimization",
+      "url": "/?role=driver",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

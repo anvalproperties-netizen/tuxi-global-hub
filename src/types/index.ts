@@ -48,6 +48,12 @@ export interface ProductVariant {
   inStock?: boolean;
   sku: string;
   attributes?: Record<string, any>;
+  weightGrams?: number | null;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  isBulk?: boolean | null;
+  isWholesale?: boolean | null;
 }
 
 export interface ProductItem {
@@ -67,7 +73,70 @@ export interface ProductItem {
   variants?: ProductVariant[];
   imageUrl?: string;
   posSyncedId?: string;
+  weightGrams?: number | null;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  isBulk?: boolean;
+  isWholesale?: boolean;
 }
+
+export type AllowedVehicleClass = 'MOTORCYCLE' | 'CAR' | 'BAKKIE';
+export type RequiredVehicleClass = 'MOTORCYCLE' | 'CAR' | 'BAKKIE' | 'BAKKIE_VERIFIED_HEAVY' | 'MANUAL_ASSESSMENT';
+
+export interface OrderPayloadLineSnapshot {
+  itemId: string;
+  variantId?: string | null;
+  sku: string;
+  name: string;
+  quantity: number;
+  unitWeightGrams: number | null;
+  unitLengthCm: number | null;
+  unitWidthCm: number | null;
+  unitHeightCm: number | null;
+  isBulk: boolean;
+  isWholesale: boolean;
+  lineTotalWeightGrams: number | null;
+  hasUnspecifiedAttributes: boolean;
+}
+
+export interface OrderPayloadAssessment {
+  id: string;
+  orderId: string;
+  version: number;
+  assessmentStatus: 'VERIFIED_COMPLETE' | 'UNASSESSED_MISSING_ATTRIBUTES';
+  knownWeightGrams: number;
+  unknownItemCount: number;
+  totalActualWeightGrams: number | null;
+  maxLengthCm: number | null;
+  maxWidthCm: number | null;
+  maxHeightCm: number | null;
+  totalVolumeCm3: number | null;
+  parcelCount: number;
+  hasBulkItem: boolean;
+  hasWholesaleItem: boolean;
+  hasUnspecifiedAttributes: boolean;
+  eligibleVehicleClasses: AllowedVehicleClass[];
+  requiredVehicleClass: RequiredVehicleClass;
+  lineSnapshots: OrderPayloadLineSnapshot[];
+  assessedByActorId?: string | null;
+  assessedByRole: 'SYSTEM' | 'MERCHANT' | 'OPERATIONS_ADMIN';
+  amendmentReason?: string | null;
+  evidenceNotes?: string | null;
+  previousAssessmentId?: string | null;
+  createdAt: string;
+}
+
+export interface DriverCapacityCertificationInput {
+  verifiedPayloadKg: number;
+  cargoLengthCm?: number;
+  cargoWidthCm?: number;
+  cargoHeightCm?: number;
+  capacityCertificateId?: string;
+  capacityEvidenceDocUrl?: string;
+  validityMonths?: number;
+}
+
 
 export interface BusinessDocument {
   id: string;

@@ -16,6 +16,7 @@ import { postgresAdapter } from '../db/postgres.js';
 import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth.js';
 import { aiRouter } from './aiRouter.js';
 import { integrationsRouter } from './integrationsRouter.js';
+import { SyntheticPaymentHarness } from '../services/syntheticPaymentHarness.js';
 
 export const apiRouter = Router();
 
@@ -32,6 +33,18 @@ apiRouter.use('/integrations', integrationsRouter);
 // ==========================================
 // 1. AUTHENTICATION & IDENTITY ENDPOINTS
 // ==========================================
+interface LoginAttemptRecord {
+  failedAttempts: number;
+  lockedUntil?: number;
+}
+const loginRateLimitMap = new Map<string, LoginAttemptRecord>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 60 * 1000; // 60 seconds
+
+export function resetLoginRateLimits() {
+  loginRateLimitMap.clear();
+}
+
 apiRouter.post('/auth/register', async (req: Request, res: Response) => {
   try {
     const { email, password, firstName, lastName, phoneNumber, role } = req.body;
@@ -46,14 +59,37 @@ apiRouter.post('/auth/register', async (req: Request, res: Response) => {
 });
 
 apiRouter.post('/auth/login', async (req: Request, res: Response) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const email = (req.body.email || '').toLowerCase().trim();
+  const rateLimitKey = `${ip}:${email}`;
+  const now = Date.now();
+
+  const record = loginRateLimitMap.get(rateLimitKey);
+  if (record && record.lockedUntil && record.lockedUntil > now) {
+    const remainingSeconds = Math.ceil((record.lockedUntil - now) / 1000);
+    return res.status(429).json({
+      error: 'RATE_LIMIT_EXCEEDED',
+      message: `Too many failed login attempts. Access temporarily locked. Try again in ${remainingSeconds} seconds.`,
+      retryAfterSeconds: remainingSeconds
+    });
+  }
+
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'MISSING_CREDENTIALS', message: 'Email and password are required' });
     }
     const result = await AuthService.login(email, password);
+    loginRateLimitMap.delete(rateLimitKey);
     res.json(result);
   } catch (err: any) {
+    const current = loginRateLimitMap.get(rateLimitKey) || { failedAttempts: 0 };
+    current.failedAttempts += 1;
+    if (current.failedAttempts >= MAX_LOGIN_ATTEMPTS) {
+      current.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+    }
+    loginRateLimitMap.set(rateLimitKey, current);
+
     const status = err.message.includes('ACCOUNT_DISABLED') ? 403 : 401;
     res.status(status).json({ error: err.message || 'LOGIN_FAILED' });
   }
@@ -1279,12 +1315,17 @@ apiRouter.get('/merchant/:id/products', authenticateToken, async (req: Authentic
 
 apiRouter.post('/merchant/:id/products', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { sku, name, description, priceCents, salePriceCents, isOnSale, isAvailable, category, initialStock, imageUrl, variants } = req.body;
+    const { 
+      sku, name, description, priceCents, salePriceCents, isOnSale, isAvailable, 
+      category, initialStock, imageUrl, variants,
+      weightGrams, lengthCm, widthCm, heightCm, isBulk, isWholesale
+    } = req.body;
     if (!sku || !name || priceCents === undefined) {
       return res.status(400).json({ error: 'MISSING_FIELDS', message: 'sku, name, and priceCents are required' });
     }
     const product = await MerchantService.createProduct(req.user!.userId, req.params.id, {
-      sku, name, description, priceCents, salePriceCents, isOnSale, isAvailable, category, initialStock, imageUrl, variants
+      sku, name, description, priceCents, salePriceCents, isOnSale, isAvailable, category, initialStock, imageUrl, variants,
+      weightGrams, lengthCm, widthCm, heightCm, isBulk, isWholesale
     });
     res.status(201).json(product);
   } catch (err: any) {
@@ -1302,6 +1343,90 @@ apiRouter.put('/merchant/:id/products/:productId', authenticateToken, async (req
     res.status(status).json({ error: err.message });
   }
 });
+
+// Stage 1: Merchant Measurement Submission for Pending Delivery Requests
+apiRouter.post('/merchant/:id/orders/:orderId/measurements', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { measurements, amendmentReason, evidenceNotes } = req.body;
+    const assessment = await MerchantService.submitOrderMeasurements(
+      req.user!.userId,
+      req.params.id,
+      req.params.orderId,
+      { measurements, amendmentReason, evidenceNotes }
+    );
+    res.json(assessment);
+  } catch (err: any) {
+    const status = err.message.includes('FORBIDDEN') ? 403 : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// Stage 1: Get Order Payload Assessment & History
+apiRouter.get('/orders/:orderId/payload-assessment', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    if (process.env.SQL_HOST && !process.env.FORCE_SQLITE) {
+      const client = await postgresAdapter.pool.connect();
+      try {
+        const historyRes = await client.query(`
+          SELECT * FROM order_payload_assessments 
+          WHERE order_id = $1 
+          ORDER BY version ASC;
+        `, [orderId]);
+        res.json({
+          assessments: historyRes.rows,
+          current: historyRes.rows[historyRes.rows.length - 1] || null
+        });
+      } finally {
+        client.release();
+      }
+    } else {
+      const rows = dbInstance.db.prepare(`
+        SELECT * FROM order_payload_assessments 
+        WHERE order_id = ? 
+        ORDER BY version ASC;
+      `).all(orderId);
+      res.json({
+        assessments: rows,
+        current: rows[rows.length - 1] || null
+      });
+    }
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Stage 1: Administrative Driver Capacity Certification
+apiRouter.post('/admin/drivers/:driverId/capacity-certification', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await MerchantService.certifyDriverCapacity(
+      req.user!.userId,
+      req.params.driverId,
+      req.body
+    );
+    res.json(result);
+  } catch (err: any) {
+    const status = err.message.includes('FORBIDDEN') ? 403 : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// Stage 1: Administrative Driver Capacity Revocation
+apiRouter.post('/admin/drivers/:driverId/capacity-revocation', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { reason } = req.body;
+    const result = await MerchantService.revokeDriverCapacity(
+      req.user!.userId,
+      req.params.driverId,
+      reason
+    );
+    res.json(result);
+  } catch (err: any) {
+    const status = err.message.includes('FORBIDDEN') ? 403 : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
 
 apiRouter.post('/merchant/:id/products/:productId/toggle-availability', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -1536,5 +1661,82 @@ apiRouter.get('/database-status', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[Database Health Check Error]', err.message);
     return res.status(503).json({ status: 'DISCONNECTED' });
+  }
+});
+
+// ==========================================
+// 10. SAFE SYNTHETIC PAYMENT TESTING HARNESS
+// ==========================================
+apiRouter.post('/payments/synthetic-test', async (req: Request, res: Response) => {
+  try {
+    const { scenario, orderId, amountCents, currency, idempotencyKey, reason, payload } = req.body;
+    let result;
+
+    switch (scenario) {
+      case 'SUCCESSFUL_AUTHORIZATION':
+        result = await SyntheticPaymentHarness.simulateSuccessfulAuth({
+          orderId: orderId || 'ord_synthetic_01',
+          amountCents: amountCents ?? 15000,
+          currency: currency || 'ZAR',
+          idempotencyKey: idempotencyKey || `idem_${Date.now()}`
+        });
+        break;
+      case 'DECLINED_PAYMENT':
+        result = await SyntheticPaymentHarness.simulateDeclinedPayment({
+          orderId: orderId || 'ord_synthetic_02',
+          amountCents: amountCents ?? 25000,
+          currency: currency || 'ZAR',
+          reason: reason || 'CARD_DECLINED_INSUFFICIENT_FUNDS',
+          idempotencyKey: idempotencyKey || `idem_${Date.now()}`
+        });
+        break;
+      case 'DUPLICATE_WEBHOOK':
+        result = await SyntheticPaymentHarness.simulateDuplicateWebhook(payload);
+        break;
+      case 'REFUND_SIMULATION':
+        result = await SyntheticPaymentHarness.simulateRefund({
+          paymentId: req.body.paymentId || 'pay_synth_ref_01',
+          orderId: orderId || 'ord_synthetic_03',
+          amountCents: amountCents ?? 5000,
+          currency: currency || 'ZAR',
+          reason: reason || 'CUSTOMER_REQUESTED_REFUND',
+          idempotencyKey: idempotencyKey || `idem_refund_${Date.now()}`
+        });
+        break;
+      case 'CANCELLED_TRANSACTION':
+        result = await SyntheticPaymentHarness.simulateCancellation({
+          orderId: orderId || 'ord_synthetic_04',
+          idempotencyKey: idempotencyKey || `idem_cancel_${Date.now()}`
+        });
+        break;
+      default:
+        return res.status(400).json({ error: `UNKNOWN_SCENARIO: '${scenario}' is not a valid synthetic scenario` });
+    }
+
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/payments/synthetic-webhook', async (req: Request, res: Response) => {
+  try {
+    const signature = req.headers['x-tuxi-signature'] as string;
+    const rawPayload = JSON.stringify(req.body);
+
+    const isVerified = SyntheticPaymentHarness.verifySignature(rawPayload, signature);
+    if (!isVerified) {
+      return res.status(401).json({ error: 'INVALID_WEBHOOK_SIGNATURE: Webhook signature verification failed' });
+    }
+
+    const { idempotencyKey } = req.body;
+    if (!idempotencyKey) {
+      return res.status(400).json({ error: 'MISSING_IDEMPOTENCY_KEY: Webhook requires mandatory idempotency key' });
+    }
+
+    const result = await SyntheticPaymentHarness.simulateDuplicateWebhook(req.body);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });

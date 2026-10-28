@@ -1,0 +1,12 @@
+{
+	"appId": "com.tuxi.marketplace.app",
+	"appName": "TUXI Global Hub",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	},
+	"packageClassList": [
+		"CAPCameraPlugin",
+		"GeolocationPlugin"
+	]
+}

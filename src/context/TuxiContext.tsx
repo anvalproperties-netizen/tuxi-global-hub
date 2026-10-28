@@ -157,6 +157,7 @@ interface TuxiContextType {
   // Authenticated User Identity (Phase 2A)
   currentUser: any | null;
   setCurrentUser: (u: any | null) => void;
+  isSessionValidating: boolean;
   logout: () => Promise<void>;
   refreshEatsBusinesses: () => Promise<void>;
   refreshOrders: () => Promise<void>;
@@ -776,27 +777,64 @@ const INITIAL_LOYALTY: LoyaltyProfile = {
 const TuxiContext = createContext<TuxiContextType | undefined>(undefined);
 
 export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeRole, setActiveRole] = useState<UserRole>(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const r = params.get('role');
-      if (r && ['customer', 'rep', 'eats_owner', 'shop_owner', 'driver'].includes(r)) {
-        return r as UserRole;
-      }
+  // Authenticated User Identity (Phase 2A & AUTH-1A)
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [isSessionValidating, setIsSessionValidating] = useState<boolean>(true);
+  const [activeRole, setActiveRoleState] = useState<UserRole>('customer');
+
+  const setActiveRole = (newRole: UserRole) => {
+    if (!currentUser) {
+      console.warn('[Role Security] Cannot switch roles without authentication');
+      return;
     }
-    return 'customer';
-  });
+    const backendRoles: string[] = Array.isArray(currentUser.roles) ? currentUser.roles : ['CUSTOMER'];
+    const rolePermissionMap: Record<UserRole, string[]> = {
+      customer: ['CUSTOMER'],
+      driver: ['TUXI_DELIVERY_DRIVER'],
+      eats_owner: ['TUXI_EATS_OWNER'],
+      shop_owner: ['TUXI_SHOP_OWNER'],
+      rep: ['TUXI_REP'],
+      admin: ['ADMIN', 'SUPER_ADMIN']
+    };
+
+    const allowedBackendRoles = rolePermissionMap[newRole] || [];
+    const hasPermission = allowedBackendRoles.some(r => backendRoles.includes(r));
+
+    if (hasPermission) {
+      setActiveRoleState(newRole);
+    } else {
+      console.warn(`[Role Security] User ${currentUser.email} is not authorized for role ${newRole}`);
+    }
+  };
+
   const [isMobileRepView, setIsMobileRepView] = useState<boolean>(false);
 
-  // Global Theme Mode (Dark / Light) with session persistence
-  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('tuxi_theme');
-      if (saved === 'dark' || saved === 'light') return saved;
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
+  const safeGetStorage = (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return localStorage.getItem(key);
       }
+    } catch (err) {
+      // Graceful fallback for restricted storage environments
     }
+    return null;
+  };
+
+  const safeSetStorage = (key: string, val: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(key, val);
+      }
+    } catch (err) {
+      // Graceful fallback for restricted storage environments
+    }
+  };
+
+  // Global Theme Mode (Dark / Light) with session persistence
+  // Authoritative Policy: Default to Light Mode for all new users on first launch.
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+    const saved = safeGetStorage('tuxi_theme');
+    if (saved === 'dark' || saved === 'light') return saved;
     return 'light';
   });
 
@@ -810,7 +848,7 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         root.classList.remove('dark');
         root.setAttribute('data-theme', 'light');
       }
-      localStorage.setItem('tuxi_theme', theme);
+      safeSetStorage('tuxi_theme', theme);
     }
   }, [theme]);
 
@@ -824,19 +862,19 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Global Cities & Worldwide Launcher State
   const [globalCities, setGlobalCities] = useState<GlobalCity[]>(() => {
-    const saved = localStorage.getItem('tuxi_global_cities');
+    const saved = safeGetStorage('tuxi_global_cities');
     return saved ? JSON.parse(saved) : GLOBAL_LAUNCHED_CITIES;
   });
 
   const [activeCity, setActiveCity] = useState<GlobalCity>(() => {
-    const saved = localStorage.getItem('tuxi_active_city');
+    const saved = safeGetStorage('tuxi_active_city');
     if (saved) return JSON.parse(saved);
     return detectUserLocation();
   });
 
   // AI Translation & Localization Service State
   const [language, setLanguageState] = useState<string>(() => {
-    const saved = localStorage.getItem('tuxi_app_language');
+    const saved = safeGetStorage('tuxi_app_language');
     if (saved) return saved;
     const loc = detectUserLocation();
     return getLanguageForCountry(loc.countryCode);
@@ -915,9 +953,6 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const saved = localStorage.getItem('tuxi_loyalty');
     return saved ? JSON.parse(saved) : INITIAL_LOYALTY;
   });
-
-  // Authenticated User Identity (Phase 2A)
-  const [currentUser, setCurrentUser] = useState<any | null>(null);
 
   const refreshEatsBusinesses = async () => {
     try {
@@ -1101,10 +1136,19 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const me = await ApiClient.getMe();
           if (me && me.user) {
             setCurrentUser(me.user);
+          } else {
+            ApiClient.clearToken();
+            setCurrentUser(null);
           }
+        } else {
+          setCurrentUser(null);
         }
       } catch (err) {
         console.warn('[Session Init]', err);
+        ApiClient.clearToken();
+        setCurrentUser(null);
+      } finally {
+        setIsSessionValidating(false);
       }
       await refreshEatsBusinesses();
       await refreshShopBusinesses();
@@ -1120,8 +1164,12 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   const logout = async () => {
-    await ApiClient.logout();
+    try {
+      await ApiClient.logout();
+    } catch (_) {}
+    ApiClient.clearToken();
     setCurrentUser(null);
+    setActiveRoleState('customer');
   };
 
   // Cart state
@@ -2183,6 +2231,7 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         currentUser,
         setCurrentUser,
+        isSessionValidating,
         logout,
         refreshEatsBusinesses,
         refreshOrders,

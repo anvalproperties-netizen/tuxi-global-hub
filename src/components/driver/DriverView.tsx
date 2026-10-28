@@ -3,6 +3,8 @@ import { useTuxi } from '../../context/TuxiContext';
 import { Order, GPSTrackingMode } from '../../types';
 import { InteractiveMap } from '../common/InteractiveMap';
 import { MultiStopRouteOptimizer } from './MultiStopRouteOptimizer';
+import { capturePhoto } from '../../utils/nativeCameraService';
+import { getCurrentDevicePosition } from '../../utils/nativeGeolocationService';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -61,6 +63,10 @@ export const DriverView: React.FC = () => {
   const [recipientName, setRecipientName] = useState<string>('Emma Watson');
   const [showSpecSheet, setShowSpecSheet] = useState<boolean>(false);
   const [autoSimulateRoute, setAutoSimulateRoute] = useState<boolean>(false);
+  const [capturedPodPhoto, setCapturedPodPhoto] = useState<string | null>(null);
+  const [isCapturingPod, setIsCapturingPod] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [gpsSyncStatus, setGpsSyncStatus] = useState<string | null>(null);
 
   // Active assigned job for this driver
   const myActiveOrder = orders.find(o => 
@@ -74,6 +80,37 @@ export const DriverView: React.FC = () => {
   );
 
   const currentJob = myActiveOrder || incomingOffers[0];
+
+  const handleTriggerCameraCapture = async () => {
+    setIsCapturingPod(true);
+    setCameraError(null);
+    try {
+      const result = await capturePhoto({ quality: 80, source: 'camera' });
+      if (result.success && result.dataUrl) {
+        setCapturedPodPhoto(result.dataUrl);
+      } else if (result.error && !result.error.includes('USER_CANCELLED')) {
+        setCameraError(result.error);
+      }
+    } catch (err: any) {
+      setCameraError(err.message || 'Failed to capture photo');
+    } finally {
+      setIsCapturingPod(false);
+    }
+  };
+
+  const handleAcquireNativeGps = async () => {
+    setGpsSyncStatus('Acquiring GPS fix...');
+    try {
+      const result = await getCurrentDevicePosition({ enableHighAccuracy: true });
+      if (result.success && result.coords) {
+        setGpsSyncStatus(`GPS Locked: ${result.coords.latitude.toFixed(4)}, ${result.coords.longitude.toFixed(4)} (±${Math.round(result.coords.accuracyMeters || 5)}m)`);
+      } else {
+        setGpsSyncStatus(`GPS Warning: ${result.error || 'Signal unavailable'}`);
+      }
+    } catch (err: any) {
+      setGpsSyncStatus(`GPS Error: ${err.message}`);
+    }
+  };
 
   // Auto route coordinate simulation effect
   useEffect(() => {
@@ -99,10 +136,11 @@ export const DriverView: React.FC = () => {
   const handleCompleteDeliverySubmission = (orderId: string) => {
     completeDriverDelivery(orderId, {
       recipientName,
-      photoUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=400&q=80',
+      photoUrl: capturedPodPhoto || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=400&q=80',
       signatureUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40"><path d="M10 20 Q 30 5, 50 25 T 90 15" stroke="black" fill="none"/></svg>'
     });
     setAutoSimulateRoute(false);
+    setCapturedPodPhoto(null);
   };
 
   // Recharts Driver Analytics Mock Data
@@ -462,13 +500,72 @@ export const DriverView: React.FC = () => {
                   )}
 
                   {myActiveOrder.status === 'in_transit' && (
-                    <button
-                      onClick={() => handleCompleteDeliverySubmission(myActiveOrder.id)}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-2 shadow-xs"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Submit Proof &amp; Complete Delivery</span>
-                    </button>
+                    <div className="space-y-3">
+                      {/* Native GPS Fix Banner */}
+                      <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+                          <span className="text-[11px] text-slate-700 font-medium truncate max-w-[200px]">
+                            {gpsSyncStatus || 'GPS Telemetry Active'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAcquireNativeGps}
+                          className="px-2.5 py-1 text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors"
+                        >
+                          Refresh Fix
+                        </button>
+                      </div>
+
+                      {/* Native POD Camera Capture */}
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-800 text-[11px]">Proof of Delivery (POD) Photo</span>
+                          {capturedPodPhoto && (
+                            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Photo Attached
+                            </span>
+                          )}
+                        </div>
+
+                        {capturedPodPhoto ? (
+                          <div className="relative rounded-lg overflow-hidden border border-emerald-300 max-h-32 bg-slate-900 flex items-center justify-center">
+                            <img src={capturedPodPhoto} alt="POD Preview" className="h-32 object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => setCapturedPodPhoto(null)}
+                              className="absolute top-1.5 right-1.5 p-1 bg-black/60 hover:bg-black/80 text-white rounded-full text-[10px]"
+                              title="Retake Photo"
+                            >
+                              Retake
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleTriggerCameraCapture}
+                            disabled={isCapturingPod}
+                            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-xs flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>{isCapturingPod ? 'Opening Camera...' : 'Capture Photo with Camera'}</span>
+                          </button>
+                        )}
+
+                        {cameraError && (
+                          <p className="text-[11px] text-rose-600">{cameraError}</p>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleCompleteDeliverySubmission(myActiveOrder.id)}
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-2 shadow-xs"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Submit Proof &amp; Complete Delivery</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

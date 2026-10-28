@@ -109,6 +109,9 @@ function computeTotp(secret: string, timeStepWindow: number = 0, timeStepSeconds
 }
 
 export class AdminService {
+  // In-memory MFA session storage for isolated testing/development (strictly non-production)
+  private static fallbackMfaSessions = new Map<string, { userId: string; expiresAt: number }>();
+
   // =========================================================================
   // 1. ADMIN MFA & SENSITIVE ACTION PROTECTION (RFC 6238 TOTP)
   // =========================================================================
@@ -262,13 +265,16 @@ export class AdminService {
           }
         }
 
-        // Backward compatibility for integration test baseline (deterministic code '123456')
-        if (!isCodeValid && cleanCode === '123456') {
+        // In production, deterministic test codes are strictly forbidden
+        if (process.env.NODE_ENV !== 'production' && !isCodeValid && cleanCode === '123456') {
           isCodeValid = true;
         }
       }
     } else {
-      // Non-Postgres fallback
+      // Non-Postgres fallback (strictly forbidden in production)
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('FATAL_PRODUCTION_SAFETY_VIOLATION: Non-PostgreSQL authentication is strictly forbidden in production.');
+      }
       if (cleanCode === '123456') {
         isCodeValid = true;
       }
@@ -300,6 +306,10 @@ export class AdminService {
         INSERT INTO admin_mfa_sessions (id, user_id, mfa_token, expires_at)
         VALUES (uuid_generate_v4(), $1, $2, $3);
       `, [userId, tokenHash, expiresAt.toISOString()]);
+    } else {
+      // Record session in fallback map for non-production environments
+      this.fallbackMfaSessions.set(tokenHash, { userId, expiresAt: expiresAt.getTime() });
+      this.fallbackMfaSessions.set(mfaToken, { userId, expiresAt: expiresAt.getTime() });
     }
 
     return {
@@ -326,6 +336,10 @@ export class AdminService {
         'DELETE FROM admin_mfa_sessions WHERE user_id = $1 AND (mfa_token = $2 OR mfa_token = $3);',
         [userId, tokenHash, mfaToken]
       );
+    } else {
+      const tokenHash = hashSessionToken(mfaToken);
+      this.fallbackMfaSessions.delete(tokenHash);
+      this.fallbackMfaSessions.delete(mfaToken);
     }
     return { revoked: true, userId };
   }
@@ -339,6 +353,13 @@ export class AdminService {
       throw new Error('MFA_REQUIRED: Sensitive administrative action requires MFA verification token');
     }
 
+    // In production, PostgreSQL enforcement is mandatory
+    if (process.env.NODE_ENV === 'production') {
+      if (!process.env.SQL_HOST || process.env.FORCE_SQLITE) {
+        throw new Error('FATAL_PRODUCTION_SAFETY_VIOLATION: PostgreSQL is mandatory for administrative MFA in production.');
+      }
+    }
+
     if (process.env.SQL_HOST && !process.env.FORCE_SQLITE) {
       const tokenHash = hashSessionToken(mfaToken);
       const res = await postgresAdapter.pool.query(`
@@ -347,6 +368,13 @@ export class AdminService {
       `, [userId, tokenHash, mfaToken]);
 
       if (res.rows.length === 0) {
+        throw new Error('MFA_INVALID_OR_EXPIRED: Administrative MFA session token is invalid or expired');
+      }
+    } else {
+      // Non-production SQLite/fallback validation
+      const tokenHash = hashSessionToken(mfaToken);
+      const session = this.fallbackMfaSessions.get(tokenHash) || this.fallbackMfaSessions.get(mfaToken);
+      if (!session || session.userId !== userId || session.expiresAt < Date.now()) {
         throw new Error('MFA_INVALID_OR_EXPIRED: Administrative MFA session token is invalid or expired');
       }
     }
@@ -370,51 +398,72 @@ export class AdminService {
     roleToAssign: UserRoleType,
     mfaToken?: string
   ) {
-    const client = await postgresAdapter.pool.connect();
-    try {
-      await client.query('BEGIN;');
+    // 1. Server-authoritative MFA session validation (fail-closed)
+    await this.validateMfaSession(actorUserId, mfaToken);
 
-      // 1. Verify actor has SUPER_ADMIN role
-      const actorRolesRes = await client.query('SELECT role FROM user_roles WHERE user_id = $1;', [actorUserId]);
-      const actorRoles = actorRolesRes.rows.map(r => r.role);
+    if (process.env.SQL_HOST && !process.env.FORCE_SQLITE) {
+      const client = await postgresAdapter.pool.connect();
+      try {
+        await client.query('BEGIN;');
 
-      if (!actorRoles.includes('SUPER_ADMIN')) {
+        // 2. Verify actor has SUPER_ADMIN role
+        const actorRolesRes = await client.query('SELECT role FROM user_roles WHERE user_id = $1;', [actorUserId]);
+        const actorRoles = actorRolesRes.rows.map(r => r.role);
+
+        if (!actorRoles.includes('SUPER_ADMIN')) {
+          await client.query('ROLLBACK;');
+          throw new Error('SUPER_ADMIN_ESCALATION_DENIED: Only Super Administrators can grant administrative roles');
+        }
+
+        // 3. Assign role if not already granted
+        const existing = await client.query('SELECT 1 FROM user_roles WHERE user_id = $1 AND role = $2;', [targetUserId, roleToAssign]);
+        if (existing.rows.length === 0) {
+          await client.query('INSERT INTO user_roles (id, user_id, role) VALUES (uuid_generate_v4(), $1, $2);', [targetUserId, roleToAssign]);
+        }
+
+        // 4. Audit trail
+        await client.query(`
+          INSERT INTO audit_logs (id, actor_id, action, resource_type, resource_id, before_state, after_state)
+          VALUES (uuid_generate_v4(), $1, 'ADMIN_ROLE_ESCALATION', 'USER_ROLE', $2, NULL, $3);
+        `, [
+          actorUserId,
+          targetUserId,
+          JSON.stringify({ grantedRole: roleToAssign, grantedAt: new Date().toISOString() })
+        ]);
+
+        await client.query('COMMIT;');
+
+        return {
+          targetUserId,
+          assignedRole: roleToAssign,
+          authorizedBy: actorUserId
+        };
+      } catch (err) {
         await client.query('ROLLBACK;');
-        throw new Error('SUPER_ADMIN_ESCALATION_DENIED: Only Super Administrators can grant administrative roles');
+        throw err;
+      } finally {
+        client.release();
       }
-
-      // 2. Validate MFA session
-      await this.validateMfaSession(actorUserId, mfaToken);
-
-      // 3. Assign role if not already granted
-      const existing = await client.query('SELECT 1 FROM user_roles WHERE user_id = $1 AND role = $2;', [targetUserId, roleToAssign]);
-      if (existing.rows.length === 0) {
-        await client.query('INSERT INTO user_roles (id, user_id, role) VALUES (uuid_generate_v4(), $1, $2);', [targetUserId, roleToAssign]);
-      }
-
-      // 4. Audit trail
-      await client.query(`
-        INSERT INTO audit_logs (id, actor_id, action, resource_type, resource_id, before_state, after_state)
-        VALUES (uuid_generate_v4(), $1, 'ADMIN_ROLE_ESCALATION', 'USER_ROLE', $2, NULL, $3);
-      `, [
-        actorUserId,
-        targetUserId,
-        JSON.stringify({ grantedRole: roleToAssign, grantedAt: new Date().toISOString() })
-      ]);
-
-      await client.query('COMMIT;');
-
-      return {
-        targetUserId,
-        assignedRole: roleToAssign,
-        authorizedBy: actorUserId
-      };
-    } catch (err) {
-      await client.query('ROLLBACK;');
-      throw err;
-    } finally {
-      client.release();
     }
+
+    // Isolated SQLite Fallback (Local test environment)
+    const actorRolesRows = dbInstance.db.prepare('SELECT role FROM user_roles WHERE user_id = ?').all(actorUserId) as { role: string }[];
+    const actorRoles = actorRolesRows.map(r => r.role);
+    if (!actorRoles.includes('SUPER_ADMIN')) {
+      throw new Error('SUPER_ADMIN_ESCALATION_DENIED: Only Super Administrators can grant administrative roles');
+    }
+
+    const existingRole = dbInstance.db.prepare('SELECT 1 FROM user_roles WHERE user_id = ? AND role = ?').get(targetUserId, roleToAssign);
+    if (!existingRole) {
+      dbInstance.db.prepare('INSERT INTO user_roles (id, user_id, role) VALUES (?, ?, ?)')
+        .run(dbInstance.generateUuid(), targetUserId, roleToAssign);
+    }
+
+    return {
+      targetUserId,
+      assignedRole: roleToAssign,
+      authorizedBy: actorUserId
+    };
   }
 
   // =========================================================================

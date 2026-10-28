@@ -1,5 +1,8 @@
 import { postgresAdapter } from '../db/postgres.js';
+import { dbInstance } from '../db/database.js';
+import { calculateOrderPayloadAssessment, resolvePhysicalAttributes } from '../utils/payloadEvaluation.js';
 import crypto from 'crypto';
+
 
 export interface MerchantAccessResult {
   authorized: boolean;
@@ -738,6 +741,36 @@ export class MerchantService {
     }
   }
 
+  public static validatePhysicalAttributesInput(input: {
+    weightGrams?: number | null;
+    lengthCm?: number | null;
+    widthCm?: number | null;
+    heightCm?: number | null;
+    isBulk?: boolean | null;
+    isWholesale?: boolean | null;
+  }) {
+    if (input.weightGrams !== undefined && input.weightGrams !== null) {
+      if (!Number.isInteger(input.weightGrams) || input.weightGrams <= 0 || input.weightGrams > 2000000) {
+        throw new Error('INVALID_PHYSICAL_ATTRIBUTES: weightGrams must be a positive integer between 1 and 2,000,000 grams');
+      }
+    }
+    const hasL = input.lengthCm !== undefined && input.lengthCm !== null;
+    const hasW = input.widthCm !== undefined && input.widthCm !== null;
+    const hasH = input.heightCm !== undefined && input.heightCm !== null;
+
+    if (hasL || hasW || hasH) {
+      if (!(hasL && hasW && hasH)) {
+        throw new Error('INCOMPLETE_DIMENSIONS: lengthCm, widthCm, and heightCm must all be provided together');
+      }
+      const l = Number(input.lengthCm);
+      const w = Number(input.widthCm);
+      const h = Number(input.heightCm);
+      if (isNaN(l) || isNaN(w) || isNaN(h) || l <= 0 || l > 500 || w <= 0 || w > 500 || h <= 0 || h > 500) {
+        throw new Error('INVALID_PHYSICAL_ATTRIBUTES: Dimensions must be positive numbers between 0.01 and 500.00 cm');
+      }
+    }
+  }
+
   public static async createProduct(
     userId: string,
     businessId: string,
@@ -752,102 +785,163 @@ export class MerchantService {
       category?: string;
       initialStock?: number;
       imageUrl?: string;
+      weightGrams?: number | null;
+      lengthCm?: number | null;
+      widthCm?: number | null;
+      heightCm?: number | null;
+      isBulk?: boolean;
+      isWholesale?: boolean;
       variants?: Array<{
         variantSku: string;
         variantName: string;
         priceDeltaCents: number;
         initialStock?: number;
         attributes?: any;
+        weightGrams?: number | null;
+        lengthCm?: number | null;
+        widthCm?: number | null;
+        heightCm?: number | null;
+        isBulk?: boolean | null;
+        isWholesale?: boolean | null;
       }>;
     }
   ) {
-    await this.verifyMerchantAccess(userId, businessId, ['OWNER', 'MANAGER', 'CATALOGUE_STAFF', 'ADMIN', 'SUPER_ADMIN']);
-    const client = await postgresAdapter.pool.connect();
-
-    try {
-      await client.query('BEGIN;');
-
-      const prodRes = await client.query(`
-        INSERT INTO products (
-          id, business_id, sku, name, description, price_cents, sale_price_cents,
-          is_on_sale, is_available, category, image_url, version, is_active, created_at, updated_at
-        )
-        VALUES (
-          uuid_generate_v4(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, true, NOW(), NOW()
-        )
-        RETURNING *;
-      `, [
-        businessId,
-        input.sku,
-        input.name,
-        input.description || null,
-        input.priceCents,
-        input.salePriceCents || null,
-        !!input.isOnSale,
-        input.isAvailable !== false,
-        input.category || 'General',
-        input.imageUrl || null
-      ]);
-
-      const product = prodRes.rows[0];
-
-      // Insert base inventory
-      const initialStock = Math.max(0, input.initialStock || 0);
-      const invRes = await client.query(`
-        INSERT INTO inventory (id, product_id, variant_id, quantity_available, reserved_quantity, updated_at)
-        VALUES (uuid_generate_v4(), $1, NULL, $2, 0, NOW())
-        RETURNING id;
-      `, [product.id, initialStock]);
-
-      // If initial stock was added, log initial adjustment
-      if (initialStock > 0) {
-        await client.query(`
-          INSERT INTO inventory_adjustments (
-            id, inventory_id, business_id, actor_id, adjustment_type, quantity_delta,
-            previous_quantity, new_quantity, reason
-          )
-          VALUES (uuid_generate_v4(), $1, $2, $3, 'RESTOCK', $4, 0, $4, 'Initial stock entry');
-        `, [invRes.rows[0].id, businessId, userId, initialStock]);
+    this.validatePhysicalAttributesInput(input);
+    if (input.variants) {
+      for (const v of input.variants) {
+        this.validatePhysicalAttributesInput(v);
       }
+    }
 
-      // Insert variants if provided
-      if (input.variants && input.variants.length > 0) {
-        for (const v of input.variants) {
-          const varRes = await client.query(`
-            INSERT INTO product_variants (
-              id, product_id, variant_sku, variant_name, price_delta_cents, attributes, is_available
+    await this.verifyMerchantAccess(userId, businessId, ['OWNER', 'MANAGER', 'CATALOGUE_STAFF', 'ADMIN', 'SUPER_ADMIN']);
+
+    if (process.env.SQL_HOST && !process.env.FORCE_SQLITE) {
+      const client = await postgresAdapter.pool.connect();
+
+      try {
+        await client.query('BEGIN;');
+
+        const prodRes = await client.query(`
+          INSERT INTO products (
+            id, business_id, sku, name, description, price_cents, sale_price_cents,
+            is_on_sale, is_available, category, image_url, version, is_active,
+            weight_grams, length_cm, width_cm, height_cm, is_bulk, is_wholesale,
+            created_at, updated_at
+          )
+          VALUES (
+            uuid_generate_v4(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, true,
+            $11, $12, $13, $14, $15, $16,
+            NOW(), NOW()
+          )
+          RETURNING *;
+        `, [
+          businessId,
+          input.sku,
+          input.name,
+          input.description || null,
+          input.priceCents,
+          input.salePriceCents || null,
+          !!input.isOnSale,
+          input.isAvailable !== false,
+          input.category || 'General',
+          input.imageUrl || null,
+          input.weightGrams ?? null,
+          input.lengthCm ?? null,
+          input.widthCm ?? null,
+          input.heightCm ?? null,
+          Boolean(input.isBulk),
+          Boolean(input.isWholesale)
+        ]);
+
+        const product = prodRes.rows[0];
+
+        // Insert base inventory
+        const initialStock = Math.max(0, input.initialStock || 0);
+        const invRes = await client.query(`
+          INSERT INTO inventory (id, product_id, variant_id, quantity_available, reserved_quantity, updated_at)
+          VALUES (uuid_generate_v4(), $1, NULL, $2, 0, NOW())
+          RETURNING id;
+        `, [product.id, initialStock]);
+
+        if (initialStock > 0) {
+          await client.query(`
+            INSERT INTO inventory_adjustments (
+              id, inventory_id, business_id, actor_id, adjustment_type, quantity_delta,
+              previous_quantity, new_quantity, reason
             )
-            VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, true)
-            RETURNING id;
-          `, [product.id, v.variantSku, v.variantName, v.priceDeltaCents || 0, JSON.stringify(v.attributes || {})]);
+            VALUES (uuid_generate_v4(), $1, $2, $3, 'RESTOCK', $4, 0, $4, 'Initial stock entry');
+          `, [invRes.rows[0].id, businessId, userId, initialStock]);
+        }
 
-          const varStock = Math.max(0, v.initialStock || 0);
-          const varInvRes = await client.query(`
-            INSERT INTO inventory (id, product_id, variant_id, quantity_available, reserved_quantity, updated_at)
-            VALUES (uuid_generate_v4(), $1, $2, $3, 0, NOW())
-            RETURNING id;
-          `, [product.id, varRes.rows[0].id, varStock]);
-
-          if (varStock > 0) {
-            await client.query(`
-              INSERT INTO inventory_adjustments (
-                id, inventory_id, business_id, actor_id, adjustment_type, quantity_delta,
-                previous_quantity, new_quantity, reason
+        // Insert variants if provided
+        if (input.variants && input.variants.length > 0) {
+          for (const v of input.variants) {
+            const varRes = await client.query(`
+              INSERT INTO product_variants (
+                id, product_id, variant_sku, variant_name, price_delta_cents, attributes, is_available,
+                weight_grams, length_cm, width_cm, height_cm, is_bulk, is_wholesale
               )
-              VALUES (uuid_generate_v4(), $1, $2, $3, 'RESTOCK', $4, 0, $4, 'Initial variant stock entry');
-            `, [varInvRes.rows[0].id, businessId, userId, varStock]);
+              VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, true, $6, $7, $8, $9, $10, $11)
+              RETURNING id;
+            `, [
+              product.id, v.variantSku, v.variantName, v.priceDeltaCents || 0, JSON.stringify(v.attributes || {}),
+              v.weightGrams ?? null, v.lengthCm ?? null, v.widthCm ?? null, v.heightCm ?? null,
+              v.isBulk !== undefined && v.isBulk !== null ? Boolean(v.isBulk) : null,
+              v.isWholesale !== undefined && v.isWholesale !== null ? Boolean(v.isWholesale) : null
+            ]);
+
+            const varStock = Math.max(0, v.initialStock || 0);
+            const varInvRes = await client.query(`
+              INSERT INTO inventory (id, product_id, variant_id, quantity_available, reserved_quantity, updated_at)
+              VALUES (uuid_generate_v4(), $1, $2, $3, 0, NOW())
+              RETURNING id;
+            `, [product.id, varRes.rows[0].id, varStock]);
+
+            if (varStock > 0) {
+              await client.query(`
+                INSERT INTO inventory_adjustments (
+                  id, inventory_id, business_id, actor_id, adjustment_type, quantity_delta,
+                  previous_quantity, new_quantity, reason
+                )
+                VALUES (uuid_generate_v4(), $1, $2, $3, 'RESTOCK', $4, 0, $4, 'Initial variant stock entry');
+              `, [varInvRes.rows[0].id, businessId, userId, varStock]);
+            }
           }
         }
-      }
 
-      await client.query('COMMIT;');
-      return product;
-    } catch (err) {
-      await client.query('ROLLBACK;');
-      throw err;
-    } finally {
-      client.release();
+        await client.query('COMMIT;');
+        return product;
+      } catch (err) {
+        await client.query('ROLLBACK;');
+        throw err;
+      } finally {
+        client.release();
+      }
     }
+
+    // SQLite Fallback
+    const prodId = crypto.randomUUID();
+    dbInstance.db.prepare(`
+      INSERT INTO products (
+        id, business_id, sku, name, description, price_cents, currency, category, is_active,
+        weight_grams, length_cm, width_cm, height_cm, is_bulk, is_wholesale, created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, 'ZAR', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      prodId, businessId, input.sku, input.name, input.description || null, input.priceCents,
+      input.category || 'General', input.isAvailable !== false ? 1 : 0,
+      input.weightGrams ?? null, input.lengthCm ?? null, input.widthCm ?? null, input.heightCm ?? null,
+      input.isBulk ? 1 : 0, input.isWholesale ? 1 : 0
+    );
+
+    const initialStock = Math.max(0, input.initialStock || 0);
+    const invId = crypto.randomUUID();
+    dbInstance.db.prepare(`
+      INSERT INTO inventory (id, product_id, quantity_available, reserved_quantity, updated_at)
+      VALUES (?, ?, ?, 0, datetime('now'))
+    `).run(invId, prodId, initialStock);
+
+    return dbInstance.db.prepare("SELECT * FROM products WHERE id = ?").get(prodId);
   }
 
   public static async updateProduct(
@@ -864,62 +958,483 @@ export class MerchantService {
       category?: string;
       imageUrl?: string;
       expectedVersion?: number;
+      weightGrams?: number | null;
+      lengthCm?: number | null;
+      widthCm?: number | null;
+      heightCm?: number | null;
+      isBulk?: boolean;
+      isWholesale?: boolean;
     }
   ) {
+    this.validatePhysicalAttributesInput(input);
     await this.verifyMerchantAccess(userId, businessId, ['OWNER', 'MANAGER', 'CATALOGUE_STAFF', 'ORDER_STAFF', 'ADMIN', 'SUPER_ADMIN']);
-    const client = await postgresAdapter.pool.connect();
 
-    try {
-      await client.query('BEGIN;');
+    if (process.env.SQL_HOST && !process.env.FORCE_SQLITE) {
+      const client = await postgresAdapter.pool.connect();
 
-      const curProd = await client.query(`
-        SELECT id, version, business_id FROM products WHERE id = $1 FOR UPDATE;
-      `, [productId]);
+      try {
+        await client.query('BEGIN;');
 
-      if (curProd.rows.length === 0 || curProd.rows[0].business_id !== businessId) {
-        throw new Error('PRODUCT_NOT_FOUND: Product not found for this business');
+        const curProd = await client.query(`
+          SELECT id, version, business_id FROM products WHERE id = $1 FOR UPDATE;
+        `, [productId]);
+
+        if (curProd.rows.length === 0 || curProd.rows[0].business_id !== businessId) {
+          throw new Error('PRODUCT_NOT_FOUND: Product not found for this business');
+        }
+
+        const currentVersion = curProd.rows[0].version;
+        if (input.expectedVersion !== undefined && input.expectedVersion !== currentVersion) {
+          throw new Error(`CONCURRENT_MODIFICATION_DETECTED: Product version mismatch. Expected ${input.expectedVersion}, but found ${currentVersion}`);
+        }
+
+        const updateRes = await client.query(`
+          UPDATE products
+          SET 
+            name = COALESCE($1, name),
+            description = COALESCE($2, description),
+            price_cents = COALESCE($3, price_cents),
+            sale_price_cents = COALESCE($4, sale_price_cents),
+            is_on_sale = COALESCE($5, is_on_sale),
+            is_available = COALESCE($6, is_available),
+            category = COALESCE($7, category),
+            image_url = COALESCE($8, image_url),
+            weight_grams = CASE WHEN $9::boolean THEN $10::integer ELSE weight_grams END,
+            length_cm = CASE WHEN $11::boolean THEN $12::numeric ELSE length_cm END,
+            width_cm = CASE WHEN $13::boolean THEN $14::numeric ELSE width_cm END,
+            height_cm = CASE WHEN $15::boolean THEN $16::numeric ELSE height_cm END,
+            is_bulk = COALESCE($17, is_bulk),
+            is_wholesale = COALESCE($18, is_wholesale),
+            version = version + 1,
+            updated_at = NOW()
+          WHERE id = $19
+          RETURNING *;
+        `, [
+          input.name !== undefined ? input.name : null,
+          input.description !== undefined ? input.description : null,
+          input.priceCents !== undefined ? input.priceCents : null,
+          input.salePriceCents !== undefined ? input.salePriceCents : null,
+          input.isOnSale !== undefined ? input.isOnSale : null,
+          input.isAvailable !== undefined ? input.isAvailable : null,
+          input.category !== undefined ? input.category : null,
+          input.imageUrl !== undefined ? input.imageUrl : null,
+          input.weightGrams !== undefined, input.weightGrams ?? null,
+          input.lengthCm !== undefined, input.lengthCm ?? null,
+          input.widthCm !== undefined, input.widthCm ?? null,
+          input.heightCm !== undefined, input.heightCm ?? null,
+          input.isBulk !== undefined ? Boolean(input.isBulk) : null,
+          input.isWholesale !== undefined ? Boolean(input.isWholesale) : null,
+          productId
+        ]);
+
+        await client.query('COMMIT;');
+        return updateRes.rows[0];
+      } catch (err) {
+        await client.query('ROLLBACK;');
+        throw err;
+      } finally {
+        client.release();
       }
-
-      const currentVersion = curProd.rows[0].version;
-      if (input.expectedVersion !== undefined && input.expectedVersion !== currentVersion) {
-        throw new Error(`CONCURRENT_MODIFICATION_DETECTED: Product version mismatch. Expected ${input.expectedVersion}, but found ${currentVersion}`);
-      }
-
-      const updateRes = await client.query(`
-        UPDATE products
-        SET 
-          name = COALESCE($1, name),
-          description = COALESCE($2, description),
-          price_cents = COALESCE($3, price_cents),
-          sale_price_cents = COALESCE($4, sale_price_cents),
-          is_on_sale = COALESCE($5, is_on_sale),
-          is_available = COALESCE($6, is_available),
-          category = COALESCE($7, category),
-          image_url = COALESCE($8, image_url),
-          version = version + 1,
-          updated_at = NOW()
-        WHERE id = $9
-        RETURNING *;
-      `, [
-        input.name !== undefined ? input.name : null,
-        input.description !== undefined ? input.description : null,
-        input.priceCents !== undefined ? input.priceCents : null,
-        input.salePriceCents !== undefined ? input.salePriceCents : null,
-        input.isOnSale !== undefined ? input.isOnSale : null,
-        input.isAvailable !== undefined ? input.isAvailable : null,
-        input.category !== undefined ? input.category : null,
-        input.imageUrl !== undefined ? input.imageUrl : null,
-        productId
-      ]);
-
-      await client.query('COMMIT;');
-      return updateRes.rows[0];
-    } catch (err) {
-      await client.query('ROLLBACK;');
-      throw err;
-    } finally {
-      client.release();
     }
+
+    // SQLite Fallback
+    const curProd = dbInstance.db.prepare("SELECT * FROM products WHERE id = ? AND business_id = ?").get(productId, businessId) as any;
+    if (!curProd) throw new Error('PRODUCT_NOT_FOUND: Product not found for this business');
+
+    dbInstance.db.prepare(`
+      UPDATE products
+      SET 
+        name = COALESCE(?, name),
+        description = COALESCE(?, description),
+        price_cents = COALESCE(?, price_cents),
+        is_active = COALESCE(?, is_active),
+        category = COALESCE(?, category),
+        weight_grams = CASE WHEN ? = 1 THEN ? ELSE weight_grams END,
+        length_cm = CASE WHEN ? = 1 THEN ? ELSE length_cm END,
+        width_cm = CASE WHEN ? = 1 THEN ? ELSE width_cm END,
+        height_cm = CASE WHEN ? = 1 THEN ? ELSE height_cm END,
+        is_bulk = COALESCE(?, is_bulk),
+        is_wholesale = COALESCE(?, is_wholesale)
+      WHERE id = ?
+    `).run(
+      input.name !== undefined ? input.name : null,
+      input.description !== undefined ? input.description : null,
+      input.priceCents !== undefined ? input.priceCents : null,
+      input.isAvailable !== undefined ? (input.isAvailable ? 1 : 0) : null,
+      input.category !== undefined ? input.category : null,
+      input.weightGrams !== undefined ? 1 : 0, input.weightGrams ?? null,
+      input.lengthCm !== undefined ? 1 : 0, input.lengthCm ?? null,
+      input.widthCm !== undefined ? 1 : 0, input.widthCm ?? null,
+      input.heightCm !== undefined ? 1 : 0, input.heightCm ?? null,
+      input.isBulk !== undefined ? (input.isBulk ? 1 : 0) : null,
+      input.isWholesale !== undefined ? (input.isWholesale ? 1 : 0) : null,
+      productId
+    );
+
+    return dbInstance.db.prepare("SELECT * FROM products WHERE id = ?").get(productId);
+  }
+
+  /**
+   * Merchant submits verified measurements for a pending delivery request.
+   * Upholds:
+   * 1. Immutable versioned assessment: inserts Version 2+ referencing previous version.
+   * 2. Concurrency-safe atomic version allocation.
+   * 3. Server revalidates payload from scratch (merchant cannot bypass vehicle rules).
+   * 4. Automatic dispatch is STRICTLY BLOCKED: order transitions to AWAITING_CUSTOMER_DELIVERY_CONFIRMATION.
+   */
+  public static async submitOrderMeasurements(
+    userId: string,
+    businessId: string,
+    orderId: string,
+    input: {
+      measurements: Array<{
+        itemId: string;
+        variantId?: string | null;
+        weightGrams: number;
+        lengthCm: number;
+        widthCm: number;
+        heightCm: number;
+      }>;
+      amendmentReason: string;
+      evidenceNotes?: string;
+    }
+  ) {
+    await this.verifyMerchantAccess(userId, businessId, ['OWNER', 'MANAGER', 'CATALOGUE_STAFF', 'ADMIN', 'SUPER_ADMIN']);
+    if (!input.amendmentReason || !input.amendmentReason.trim()) {
+      throw new Error('AMENDMENT_REASON_REQUIRED: Reason for measurement submission must be provided');
+    }
+    if (!input.measurements || input.measurements.length === 0) {
+      throw new Error('MISSING_MEASUREMENTS: At least one item measurement must be supplied');
+    }
+
+    for (const m of input.measurements) {
+      if (!Number.isInteger(m.weightGrams) || m.weightGrams <= 0 || m.weightGrams > 2000000) {
+        throw new Error('INVALID_PHYSICAL_ATTRIBUTES: weightGrams must be a positive integer between 1 and 2,000,000 grams');
+      }
+      if (m.lengthCm <= 0 || m.lengthCm > 500 || m.widthCm <= 0 || m.widthCm > 500 || m.heightCm <= 0 || m.heightCm > 500) {
+        throw new Error('INVALID_PHYSICAL_ATTRIBUTES: Dimensions must be positive numbers between 0.01 and 500.00 cm');
+      }
+    }
+
+    if (process.env.SQL_HOST && !process.env.FORCE_SQLITE) {
+      const client = await postgresAdapter.pool.connect();
+      try {
+        await client.query('BEGIN;');
+
+        const orderRes = await client.query('SELECT * FROM orders WHERE id = $1 AND business_id = $2 FOR UPDATE;', [orderId, businessId]);
+        if (orderRes.rows.length === 0) {
+          throw new Error('ORDER_NOT_FOUND: Order not found for this merchant');
+        }
+
+        const prevRes = await client.query(`
+          SELECT * FROM order_payload_assessments 
+          WHERE order_id = $1 
+          ORDER BY version DESC 
+          LIMIT 1;
+        `, [orderId]);
+
+        const prevAssessment = prevRes.rows[0];
+        const nextVersion = prevAssessment ? (prevAssessment.version + 1) : 1;
+        const prevId = prevAssessment ? prevAssessment.id : null;
+
+        const itemsRes = await client.query(`
+          SELECT oi.*, p.sku as prod_sku, p.name as prod_name, p.weight_grams, p.length_cm, p.width_cm, p.height_cm, p.is_bulk, p.is_wholesale
+          FROM order_items oi
+          JOIN products p ON p.id = oi.item_id
+          WHERE oi.order_id = $1;
+        `, [orderId]);
+
+        const calculatedInput = itemsRes.rows.map(r => {
+          const m = input.measurements.find(item => item.itemId === r.item_id && (item.variantId || null) === (r.variant_id || null));
+          const prodAttrs = {
+            weight_grams: m ? m.weightGrams : r.weight_grams,
+            length_cm: m ? m.lengthCm : r.length_cm,
+            width_cm: m ? m.widthCm : r.width_cm,
+            height_cm: m ? m.heightCm : r.height_cm,
+            is_bulk: Boolean(r.is_bulk),
+            is_wholesale: Boolean(r.is_wholesale)
+          };
+          return {
+            itemId: r.item_id,
+            variantId: r.variant_id,
+            sku: r.prod_sku,
+            name: r.prod_name,
+            quantity: r.quantity,
+            product: prodAttrs,
+            variant: null
+          };
+        });
+
+        const calculated = calculateOrderPayloadAssessment(calculatedInput);
+
+        const newAssessRes = await client.query(`
+          INSERT INTO order_payload_assessments (
+            id, order_id, version, assessment_status, known_weight_grams, unknown_item_count,
+            total_actual_weight_grams, max_length_cm, max_width_cm, max_height_cm, total_volume_cm3,
+            parcel_count, has_bulk_item, has_wholesale_item, has_unspecified_attributes,
+            eligible_vehicle_classes, required_vehicle_class, line_snapshots,
+            assessed_by_actor_id, assessed_by_role, amendment_reason, evidence_notes,
+            previous_assessment_id, created_at
+          )
+          VALUES (
+            uuid_generate_v4(), $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10,
+            $11, $12, $13, $14,
+            $15, $16, $17,
+            $18, 'MERCHANT', $19, $20,
+            $21, NOW()
+          )
+          RETURNING *;
+        `, [
+          orderId, nextVersion, calculated.assessmentStatus, calculated.knownWeightGrams, calculated.unknownItemCount,
+          calculated.totalActualWeightGrams, calculated.maxLengthCm, calculated.maxWidthCm, calculated.maxHeightCm, calculated.totalVolumeCm3,
+          calculated.parcelCount, calculated.hasBulkItem, calculated.hasWholesaleItem, calculated.hasUnspecifiedAttributes,
+          JSON.stringify(calculated.eligibleVehicleClasses), calculated.requiredVehicleClass, JSON.stringify(calculated.lineSnapshots),
+          userId, input.amendmentReason, input.evidenceNotes || null, prevId
+        ]);
+
+        await client.query(`
+          UPDATE orders 
+          SET status = 'AWAITING_CUSTOMER_DELIVERY_CONFIRMATION', updated_at = NOW() 
+          WHERE id = $1;
+        `, [orderId]);
+
+        await client.query('COMMIT;');
+        return newAssessRes.rows[0];
+      } catch (err) {
+        await client.query('ROLLBACK;');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+
+    // SQLite Fallback
+    const order = dbInstance.db.prepare("SELECT * FROM orders WHERE id = ? AND business_id = ?").get(orderId, businessId) as any;
+    if (!order) throw new Error('ORDER_NOT_FOUND: Order not found for this merchant');
+
+    const prevAssessment = dbInstance.db.prepare("SELECT * FROM order_payload_assessments WHERE order_id = ? ORDER BY version DESC LIMIT 1").get(orderId) as any;
+    const nextVersion = prevAssessment ? (prevAssessment.version + 1) : 1;
+    const prevId = prevAssessment ? prevAssessment.id : null;
+
+    const items = dbInstance.db.prepare(`
+      SELECT oi.*, p.sku as prod_sku, p.name as prod_name, p.weight_grams, p.length_cm, p.width_cm, p.height_cm, p.is_bulk, p.is_wholesale
+      FROM order_items oi
+      JOIN products p ON p.id = oi.item_id
+      WHERE oi.order_id = ?
+    `).all(orderId) as any[];
+
+    const calculatedInput = items.map(r => {
+      const m = input.measurements.find(item => item.itemId === r.item_id);
+      const prodAttrs = {
+        weight_grams: m ? m.weightGrams : r.weight_grams,
+        length_cm: m ? m.lengthCm : r.length_cm,
+        width_cm: m ? m.widthCm : r.width_cm,
+        height_cm: m ? m.heightCm : r.height_cm,
+        is_bulk: Boolean(r.is_bulk),
+        is_wholesale: Boolean(r.is_wholesale)
+      };
+      return {
+        itemId: r.item_id,
+        variantId: r.variant_id,
+        sku: r.prod_sku || 'SKU',
+        name: r.prod_name || 'Item',
+        quantity: r.quantity,
+        product: prodAttrs,
+        variant: null
+      };
+    });
+
+    const calculated = calculateOrderPayloadAssessment(calculatedInput);
+    const newId = crypto.randomUUID();
+
+    dbInstance.db.prepare(`
+      INSERT INTO order_payload_assessments (
+        id, order_id, version, assessment_status, known_weight_grams, unknown_item_count,
+        total_actual_weight_grams, max_length_cm, max_width_cm, max_height_cm, total_volume_cm3,
+        parcel_count, has_bulk_item, has_wholesale_item, has_unspecified_attributes,
+        eligible_vehicle_classes, required_vehicle_class, line_snapshots,
+        assessed_by_actor_id, assessed_by_role, amendment_reason, evidence_notes,
+        previous_assessment_id, created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'MERCHANT', ?, ?, ?, datetime('now'))
+    `).run(
+      newId, orderId, nextVersion, calculated.assessmentStatus, calculated.knownWeightGrams, calculated.unknownItemCount,
+      calculated.totalActualWeightGrams, calculated.maxLengthCm, calculated.maxWidthCm, calculated.maxHeightCm, calculated.totalVolumeCm3,
+      calculated.parcelCount, calculated.hasBulkItem ? 1 : 0, calculated.hasWholesaleItem ? 1 : 0, calculated.hasUnspecifiedAttributes ? 1 : 0,
+      JSON.stringify(calculated.eligibleVehicleClasses), calculated.requiredVehicleClass, JSON.stringify(calculated.lineSnapshots),
+      userId, input.amendmentReason, input.evidenceNotes || null, prevId
+    );
+
+    dbInstance.db.prepare("UPDATE orders SET status = 'AWAITING_CUSTOMER_DELIVERY_CONFIRMATION', updated_at = datetime('now') WHERE id = ?").run(orderId);
+
+    return dbInstance.db.prepare("SELECT * FROM order_payload_assessments WHERE id = ?").get(newId);
+  }
+
+  /**
+   * Operations Admin certifies a driver's vehicle payload capacity and dimensions.
+   * Strictly restricted to SUPER_ADMIN / ADMIN roles.
+   * Drivers, Reps, and Merchants cannot self-certify.
+   */
+  public static async certifyDriverCapacity(
+    adminUserId: string,
+    driverId: string,
+    input: {
+      verifiedPayloadKg: number;
+      cargoLengthCm?: number;
+      cargoWidthCm?: number;
+      cargoHeightCm?: number;
+      capacityCertificateId?: string;
+      capacityEvidenceDocUrl?: string;
+      validityMonths?: number;
+    }
+  ) {
+    if (!Number.isInteger(input.verifiedPayloadKg) || input.verifiedPayloadKg <= 0 || input.verifiedPayloadKg > 10000) {
+      throw new Error('INVALID_PAYLOAD_CAPACITY: verifiedPayloadKg must be a positive integer <= 10,000 kg');
+    }
+
+    const validityMonths = input.validityMonths && input.validityMonths > 0 && input.validityMonths <= 12 ? input.validityMonths : 12;
+
+    if (process.env.SQL_HOST && !process.env.FORCE_SQLITE) {
+      const client = await postgresAdapter.pool.connect();
+      try {
+        const adminCheck = await client.query(
+          "SELECT role FROM user_roles WHERE user_id = $1 AND role IN ('ADMIN', 'SUPER_ADMIN');",
+          [adminUserId]
+        );
+        if (adminCheck.rows.length === 0) {
+          throw new Error('FORBIDDEN_SELF_CERTIFICATION_PROHIBITED: Only authorized TUXI operations administrators can certify driver capacity');
+        }
+
+        const expiresAt = new Date(Date.now() + validityMonths * 30 * 24 * 60 * 60 * 1000);
+
+        const updateRes = await client.query(`
+          UPDATE driver_profiles
+          SET 
+            verified_payload_kg = $1,
+            cargo_length_cm = $2,
+            cargo_width_cm = $3,
+            cargo_height_cm = $4,
+            capacity_certificate_id = $5,
+            capacity_evidence_doc_url = $6,
+            capacity_verified_at = NOW(),
+            capacity_verified_by = $7,
+            capacity_expires_at = $8,
+            capacity_revoked_at = NULL,
+            capacity_revocation_reason = NULL,
+            updated_at = NOW()
+          WHERE id = $9
+          RETURNING *;
+        `, [
+          input.verifiedPayloadKg,
+          input.cargoLengthCm || null,
+          input.cargoWidthCm || null,
+          input.cargoHeightCm || null,
+          input.capacityCertificateId || null,
+          input.capacityEvidenceDocUrl || null,
+          adminUserId,
+          expiresAt.toISOString(),
+          driverId
+        ]);
+
+        if (updateRes.rows.length === 0) {
+          throw new Error('DRIVER_PROFILE_NOT_FOUND');
+        }
+
+        return updateRes.rows[0];
+      } finally {
+        client.release();
+      }
+    }
+
+    // SQLite Fallback
+    const adminRole = dbInstance.db.prepare("SELECT role FROM user_roles WHERE user_id = ? AND role IN ('ADMIN', 'SUPER_ADMIN')").get(adminUserId);
+    if (!adminRole) {
+      throw new Error('FORBIDDEN_SELF_CERTIFICATION_PROHIBITED: Only authorized TUXI operations administrators can certify driver capacity');
+    }
+
+    const expiresAt = new Date(Date.now() + validityMonths * 30 * 24 * 60 * 60 * 1000).toISOString();
+    const res = dbInstance.db.prepare(`
+      UPDATE driver_profiles
+      SET 
+        verified_payload_kg = ?,
+        cargo_length_cm = ?,
+        cargo_width_cm = ?,
+        cargo_height_cm = ?,
+        capacity_certificate_id = ?,
+        capacity_evidence_doc_url = ?,
+        capacity_verified_at = datetime('now'),
+        capacity_verified_by = ?,
+        capacity_expires_at = ?,
+        capacity_revoked_at = NULL,
+        capacity_revocation_reason = NULL
+      WHERE id = ?
+    `).run(
+      input.verifiedPayloadKg,
+      input.cargoLengthCm || null,
+      input.cargoWidthCm || null,
+      input.cargoHeightCm || null,
+      input.capacityCertificateId || null,
+      input.capacityEvidenceDocUrl || null,
+      adminUserId,
+      expiresAt,
+      driverId
+    );
+
+    if (res.changes === 0) throw new Error('DRIVER_PROFILE_NOT_FOUND');
+    return dbInstance.db.prepare("SELECT * FROM driver_profiles WHERE id = ?").get(driverId);
+  }
+
+  public static async revokeDriverCapacity(adminUserId: string, driverId: string, reason: string) {
+    if (!reason || !reason.trim()) {
+      throw new Error('REVOCATION_REASON_REQUIRED');
+    }
+
+    if (process.env.SQL_HOST && !process.env.FORCE_SQLITE) {
+      const client = await postgresAdapter.pool.connect();
+      try {
+        const adminCheck = await client.query(
+          "SELECT role FROM user_roles WHERE user_id = $1 AND role IN ('ADMIN', 'SUPER_ADMIN');",
+          [adminUserId]
+        );
+        if (adminCheck.rows.length === 0) {
+          throw new Error('FORBIDDEN_REVOCATION_PROHIBITED: Only authorized TUXI operations administrators can revoke driver capacity');
+        }
+
+        const updateRes = await client.query(`
+          UPDATE driver_profiles
+          SET 
+            capacity_revoked_at = NOW(),
+            capacity_revocation_reason = $1,
+            updated_at = NOW()
+          WHERE id = $2
+          RETURNING *;
+        `, [reason, driverId]);
+
+        if (updateRes.rows.length === 0) throw new Error('DRIVER_PROFILE_NOT_FOUND');
+        return updateRes.rows[0];
+      } finally {
+        client.release();
+      }
+    }
+
+    const adminRole = dbInstance.db.prepare("SELECT role FROM user_roles WHERE user_id = ? AND role IN ('ADMIN', 'SUPER_ADMIN')").get(adminUserId);
+    if (!adminRole) {
+      throw new Error('FORBIDDEN_REVOCATION_PROHIBITED: Only authorized TUXI operations administrators can revoke driver capacity');
+    }
+
+    const res = dbInstance.db.prepare(`
+      UPDATE driver_profiles
+      SET 
+        capacity_revoked_at = datetime('now'),
+        capacity_revocation_reason = ?
+      WHERE id = ?
+    `).run(reason, driverId);
+
+    if (res.changes === 0) throw new Error('DRIVER_PROFILE_NOT_FOUND');
+    return dbInstance.db.prepare("SELECT * FROM driver_profiles WHERE id = ?").get(driverId);
+  }
+
   }
 
   public static async toggleProductAvailability(

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TUXI Global Hub</string>
+    <string name="title_activity_main">TUXI Global Hub</string>
+    <string name="package_name">com.tuxi.marketplace.app</string>
+    <string name="custom_url_scheme">com.tuxi.marketplace.app</string>
+</resources>

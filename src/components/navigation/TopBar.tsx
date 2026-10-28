@@ -3,6 +3,7 @@ import { useTuxi } from '../../context/TuxiContext';
 import { UserRole } from '../../types';
 import { LegalComplianceModal } from '../common/LegalComplianceModal';
 import { LoyaltyPointsTracker } from './LoyaltyPointsTracker';
+import { AuthorizedProfileSwitcher } from './AuthorizedProfileSwitcher';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import { StoreTestingReviewerHub } from '../common/StoreTestingReviewerHub';
 import { PrivacyPolicyModal } from '../common/PrivacyPolicyModal';
@@ -146,51 +147,10 @@ export const TopBar: React.FC = () => {
               </span>
             </button>
 
-            {/* Zone 3: Role Switcher (Compact below XL, full pills on XL+) */}
-            <div className="flex xl:hidden items-center shrink-0">
-              <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 px-1.5 sm:px-2 py-1 rounded-lg">
-                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider hidden sm:inline">
-                  Role:
-                </span>
-                <select
-                  value={activeRole}
-                  onChange={e => setActiveRole(e.target.value as UserRole)}
-                  aria-label="Switch Role View"
-                  className="text-xs font-bold bg-transparent text-indigo-950 dark:text-indigo-100 focus:outline-none cursor-pointer max-w-[105px] sm:max-w-none truncate"
-                >
-                  {roles.map(r => (
-                    <option key={r.role} value={r.role} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Zone 3: Server-Authorized Profile & Role Switcher */}
+            <div className="flex items-center shrink-0">
+              <AuthorizedProfileSwitcher />
             </div>
-
-            <nav className="hidden xl:flex items-center p-1 bg-slate-100 dark:bg-slate-800/90 rounded-lg overflow-x-auto max-w-xl scrollbar-none transition-colors">
-              {roles.map(({ role, label, icon }) => {
-                const isActive = activeRole === role;
-                return (
-                  <button
-                    key={role}
-                    onClick={() => setActiveRole(role)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap shrink-0 ${
-                      isActive
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
-                    }`}
-                  >
-                    {icon}
-                    <span>{label}</span>
-                    {role === 'customer' && totalCartItems > 0 && (
-                      <span className="ml-1 bg-indigo-600 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
-                        {totalCartItems}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
 
             {/* Zone 4: Quick Context Actions & Store QA Hub */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
