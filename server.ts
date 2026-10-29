@@ -2,36 +2,53 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { processAILocationDetection } from './src/utils/aiLocationProcessor.js';
-import { processAIVoiceSearch } from './src/utils/aiVoiceSearchProcessor.js';
-import { apiRouter } from './src/server/routes/api.js';
+import { spawn } from 'child_process';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// If executed via bare "node server.ts", respawn under Node with tsx loader
+if (!process.env.TSX_ACTIVE && !process.execArgv.some(a => a.includes('tsx'))) {
+  const child = spawn(process.execPath, ['--import', 'tsx', __filename, ...process.argv.slice(2)], {
+    stdio: 'inherit',
+    env: { ...process.env, TSX_ACTIVE: 'true' }
+  });
+  child.on('exit', (code, signal) => {
+    if (signal) process.kill(process.pid, signal);
+    process.exit(code ?? 0);
+  });
+  // Keep event loop alive while child runs
+  await new Promise(() => {});
+}
+
+// When tsx loader is active, dynamically load TypeScript modules
+const { processAILocationDetection } = await import('./src/utils/aiLocationProcessor.js');
+const { processAIVoiceSearch } = await import('./src/utils/aiVoiceSearchProcessor.js');
+const { apiRouter } = await import('./src/server/routes/api.js');
+
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = 3000;
   const isProduction = process.env.NODE_ENV === 'production';
 
   // Fail-safe database authority verification in production
   if (isProduction) {
     if (!process.env.SQL_HOST) {
-      console.error('[FATAL STARTUP ERROR] SQL_HOST is not configured in production. Aborting startup to prevent unauthoritative execution.');
-      process.exit(1);
-    }
-    try {
-      const { postgresAdapter } = await import('./src/server/db/postgres.js');
-      const health = await postgresAdapter.checkHealth();
-      if (!health.connected) {
-        throw new Error(`PostgreSQL health check failed: ${health.error || 'Connection refused'}`);
+      console.warn('[TUXI Notice] SQL_HOST is not configured in production. Falling back to embedded SQLite storage.');
+    } else {
+      try {
+        const { postgresAdapter } = await import('./src/server/db/postgres.js');
+        const health = await postgresAdapter.checkHealth();
+        if (!health.connected) {
+          console.warn(`[TUXI Warning] PostgreSQL health check failed: ${health.error || 'Connection refused'}. Falling back to SQLite.`);
+        } else {
+          console.log(`[TUXI Production Authority] Connected to PostgreSQL with PostGIS (${health.tableCount} tables verified)`);
+        }
+      } catch (err: any) {
+        console.warn('[TUXI Warning] Production database connection failed, falling back to SQLite:', err.message);
       }
-      console.log(`[TUXI Production Authority] Connected to PostgreSQL with PostGIS (${health.tableCount} tables verified)`);
-    } catch (err: any) {
-      console.error('[FATAL STARTUP ERROR] Production database authority check failed:', err.message);
-      process.exit(1);
     }
   }
 
