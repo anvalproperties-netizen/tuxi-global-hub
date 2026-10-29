@@ -13,6 +13,7 @@ import { CourierService } from '../services/courierService.js';
 import { DeliveryService } from '../services/deliveryService.js';
 import { MerchantService } from '../services/merchantService.js';
 import { postgresAdapter } from '../db/postgres.js';
+import { dbInstance } from '../db/database.js';
 import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth.js';
 import { aiRouter } from './aiRouter.js';
 import { integrationsRouter } from './integrationsRouter.js';

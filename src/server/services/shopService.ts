@@ -37,8 +37,8 @@ export interface ShopProduct {
   lengthCm?: number | null;
   widthCm?: number | null;
   heightCm?: number | null;
-  isBulk: boolean;
-  isWholesale: boolean;
+  isBulk?: boolean;
+  isWholesale?: boolean;
   variants: ShopProductVariant[];
 }
 
@@ -294,6 +294,12 @@ export class ShopService {
             isAvailable: Boolean(p.is_available && totalStock > 0),
             imageUrl: p.image_url,
             stockAvailable: totalStock,
+            weightGrams: p.weight_grams ?? null,
+            lengthCm: p.length_cm ?? null,
+            widthCm: p.width_cm ?? null,
+            heightCm: p.height_cm ?? null,
+            isBulk: Boolean(p.is_bulk),
+            isWholesale: Boolean(p.is_wholesale),
             variants
           };
         });
@@ -316,6 +322,12 @@ export class ShopService {
       effectivePriceCents: p.price_cents,
       isAvailable: Boolean(p.is_active),
       stockAvailable: 10,
+      weightGrams: p.weight_grams ?? null,
+      lengthCm: p.length_cm ?? null,
+      widthCm: p.width_cm ?? null,
+      heightCm: p.height_cm ?? null,
+      isBulk: Boolean(p.is_bulk),
+      isWholesale: Boolean(p.is_wholesale),
       variants: []
     }));
   }
@@ -409,6 +421,12 @@ export class ShopService {
           isAvailable: Boolean(p.is_available && totalStock > 0),
           imageUrl: p.image_url,
           stockAvailable: totalStock,
+          weightGrams: p.weight_grams ?? null,
+          lengthCm: p.length_cm ?? null,
+          widthCm: p.width_cm ?? null,
+          heightCm: p.height_cm ?? null,
+          isBulk: Boolean(p.is_bulk),
+          isWholesale: Boolean(p.is_wholesale),
           variants
         };
       } finally {
@@ -430,6 +448,12 @@ export class ShopService {
       effectivePriceCents: p.price_cents,
       isAvailable: Boolean(p.is_active),
       stockAvailable: 10,
+      weightGrams: p.weight_grams ?? null,
+      lengthCm: p.length_cm ?? null,
+      widthCm: p.width_cm ?? null,
+      heightCm: p.height_cm ?? null,
+      isBulk: Boolean(p.is_bulk),
+      isWholesale: Boolean(p.is_wholesale),
       variants: []
     };
   }

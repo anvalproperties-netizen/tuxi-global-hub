@@ -1435,8 +1435,6 @@ export class MerchantService {
     return dbInstance.db.prepare("SELECT * FROM driver_profiles WHERE id = ?").get(driverId);
   }
 
-  }
-
   public static async toggleProductAvailability(
     userId: string,
     businessId: string,
