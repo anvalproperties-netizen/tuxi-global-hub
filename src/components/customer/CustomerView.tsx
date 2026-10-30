@@ -121,7 +121,12 @@ export const CustomerView: React.FC = () => {
     startGroupOrder,
     aiLocationStatus,
     triggerAILocationDetection,
-    setActiveRole
+    setActiveRole,
+    currentUser,
+    repApplication,
+    driverApplication,
+    setIsRepApplicantModalOpen,
+    setIsDriverApplicantModalOpen
   } = useTuxi();
 
   const [activeTab, setActiveTab] = useState<'eats' | 'shop' | 'courier' | 'tracking' | 'payments'>(() => {
@@ -537,16 +542,53 @@ export const CustomerView: React.FC = () => {
             <span>{t('payments', 'Payment Methods')}</span>
           </button>
 
+          {/* TUXI Delivery Driver Direct Access Button */}
+          <button
+            onClick={() => {
+              if (currentUser?.roles?.includes('TUXI_DELIVERY_DRIVER')) {
+                setActiveRole('driver');
+              } else {
+                setIsDriverApplicantModalOpen(true);
+              }
+            }}
+            className="px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xs ml-auto sm:ml-0 cursor-pointer"
+            title="TUXI Delivery Driver & Courier Portal"
+          >
+            <Truck className="w-3.5 h-3.5 text-emerald-200" />
+            <span>🚚 TUXI Driver</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] bg-white/20 font-mono font-bold text-emerald-100 uppercase">
+              {currentUser?.roles?.includes('TUXI_DELIVERY_DRIVER') 
+                ? 'COCKPIT' 
+                : (driverApplication?.status === 'PENDING_REVIEW' || driverApplication?.status === 'PENDING')
+                ? 'IN REVIEW'
+                : driverApplication?.status === 'CHANGES_REQUESTED'
+                ? 'ACTION REQ'
+                : 'APPLY'}
+            </span>
+          </button>
+
           {/* TUXI Rep Direct Access Button */}
           <button
-            onClick={() => setActiveRole('rep')}
-            className="px-3.5 py-2 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-xs ml-auto"
-            title="Open TUXI Rep Portal (Field Sales & Merchant Onboarding)"
+            onClick={() => {
+              if (currentUser?.roles?.includes('TUXI_REP')) {
+                setActiveRole('rep');
+              } else {
+                setIsRepApplicantModalOpen(true);
+              }
+            }}
+            className="px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-xs cursor-pointer"
+            title="Open TUXI Rep Portal (Field Sales & Merchant Acquisition)"
           >
             <Users className="w-3.5 h-3.5 text-cyan-200" />
             <span>💼 TUXI Rep</span>
-            <span className="px-1.5 py-0.2 rounded text-[9px] bg-white/20 font-mono font-bold text-cyan-200 uppercase">
-              PORTAL
+            <span className="px-1.5 py-0.2 rounded text-[9px] bg-white/20 font-mono font-bold text-cyan-100 uppercase">
+              {currentUser?.roles?.includes('TUXI_REP') 
+                ? 'PORTAL' 
+                : (repApplication?.status === 'PENDING_REVIEW' || repApplication?.status === 'PENDING')
+                ? 'IN REVIEW'
+                : repApplication?.status === 'CHANGES_REQUESTED'
+                ? 'ACTION REQ'
+                : 'APPLY'}
             </span>
           </button>
         </div>

@@ -781,6 +781,19 @@ export class AdminService {
         throw new Error('SIMULATED_PAYMENT_DISPATCH_FORBIDDEN: Simulated payment cannot authorize production dispatch');
       }
 
+      // Validate driver profile and vehicle eligibility: BICYCLES STRICTLY PROHIBITED
+      const dProfileRes = await client.query('SELECT id, vehicle_type, verification_status, is_suspended FROM driver_profiles WHERE id = $1;', [driverId]);
+      if (dProfileRes.rows.length === 0) {
+        await client.query('ROLLBACK;');
+        throw new Error('DRIVER_NOT_FOUND: Assigned driver profile does not exist');
+      }
+      const dProfile = dProfileRes.rows[0];
+      const rawVehicleType = (dProfile.vehicle_type || '').toUpperCase();
+      if (rawVehicleType.includes('BICYCLE') || (rawVehicleType.includes('BIKE') && !rawVehicleType.includes('MOTORBIKE'))) {
+        await client.query('ROLLBACK;');
+        throw new Error('BICYCLE_DISPATCH_PROHIBITED: Bicycles and electric bicycles are strictly prohibited from receiving delivery dispatch assignments.');
+      }
+
       // Check if delivery already exists or create new
       const dRes = await client.query('SELECT id FROM deliveries WHERE order_id = $1;', [orderId]);
       if (dRes.rows.length > 0) {

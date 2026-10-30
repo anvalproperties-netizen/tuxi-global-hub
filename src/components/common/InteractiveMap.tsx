@@ -23,7 +23,7 @@ import {
   CheckCircle, 
   AlertOctagon, 
   User, 
-  Bike, 
+  Truck, 
   Compass, 
   Layers 
 } from 'lucide-react';
@@ -245,7 +245,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 <div className="relative">
                   <span className="absolute -inset-1 rounded-full bg-emerald-500/40 animate-ping" />
                   <div className="relative w-8 h-8 rounded-full bg-slate-900 border-2 border-white text-emerald-400 flex items-center justify-center shadow-lg">
-                    <Bike className="w-4 h-4" />
+                    <Truck className="w-4 h-4" />
                   </div>
                 </div>
               </div>

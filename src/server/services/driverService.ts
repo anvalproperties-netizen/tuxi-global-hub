@@ -3,10 +3,33 @@ import { postgresAdapter } from '../db/postgres.js';
 export interface OnboardDriverInput {
   userId: string;
   licenseNumber: string;
-  vehicleType: string; // 'CAR' | 'MOTORBIKE' | 'BICYCLE' | 'VAN'
+  vehicleType: string; // 'MOTORCYCLE' | 'CAR' | 'BAKKIE' | 'LIGHT_TRUCK'
   vehiclePlate: string;
   isOnline?: boolean;
 }
+
+export const APPROVED_DELIVERY_VEHICLE_TYPES = [
+  'MOTORCYCLE',
+  'SCOOTER',
+  'MOTORBIKE',
+  'CAR',
+  'SEDAN',
+  'HATCHBACK',
+  'BAKKIE',
+  'VAN',
+  'LIGHT_TRUCK',
+  'TRUCK'
+] as const;
+
+export const PROHIBITED_DELIVERY_VEHICLE_TYPES = [
+  'BICYCLE',
+  'BIKE',
+  'E_BIKE',
+  'E-BIKE',
+  'ELECTRIC_BICYCLE',
+  'ELECTRIC_BIKE',
+  'PEDAL_BICYCLE'
+] as const;
 
 export interface UpdateAvailabilityInput {
   driverId: string;
@@ -24,8 +47,22 @@ export class DriverService {
   /**
    * Onboards a driver profile in PostgreSQL.
    * Derives authority from server-side roles: requires TUXI_DELIVERY_DRIVER role on the user.
+   * STRICT ENFORCEMENT: Bicycles and electric bikes are strictly prohibited.
    */
   public static async onboardDriver(input: OnboardDriverInput) {
+    const rawType = (input.vehicleType || '').trim().toUpperCase();
+
+    // 0. Strict backend transport restriction: Reject Bicycles and E-Bikes
+    if (
+      PROHIBITED_DELIVERY_VEHICLE_TYPES.some(p => rawType === p || (rawType.includes('BICYCLE') || (rawType.includes('BIKE') && !rawType.includes('MOTORBIKE'))))
+    ) {
+      throw new Error('BICYCLE_TRANSPORT_PROHIBITED: Bicycles and electric bicycles are strictly prohibited for commercial delivery transport. Approved categories are Motorcycle / Scooter, Car, Bakkie / Van, and Suitable Light Truck.');
+    }
+
+    if (!APPROVED_DELIVERY_VEHICLE_TYPES.some(a => rawType === a || rawType.includes(a))) {
+      throw new Error(`INVALID_VEHICLE_TYPE: '${input.vehicleType}' is not an approved delivery transport category. Approved categories: Motorcycle / Scooter, Car, Bakkie / Van, and Suitable Light Truck.`);
+    }
+
     const client = await postgresAdapter.pool.connect();
     try {
       await client.query('BEGIN;');
@@ -254,7 +291,7 @@ export class DriverService {
    */
   public static async isDriverEligible(driverId: string): Promise<boolean> {
     const res = await postgresAdapter.pool.query(`
-      SELECT dp.id, dp.verification_status, dp.is_suspended, dp.is_online, u.is_active
+      SELECT dp.id, dp.verification_status, dp.is_suspended, dp.is_online, dp.vehicle_type, u.is_active
       FROM driver_profiles dp
       JOIN users u ON u.id = dp.user_id
       WHERE dp.id = $1;
@@ -262,6 +299,16 @@ export class DriverService {
 
     if (res.rows.length === 0) return false;
     const d = res.rows[0];
+
+    // Historical records preservation: Existing bicycle records remain in DB, but cannot accept active deliveries
+    const rawType = (d.vehicle_type || '').toUpperCase();
+    if (
+      rawType.includes('BICYCLE') || 
+      (rawType.includes('BIKE') && !rawType.includes('MOTORBIKE'))
+    ) {
+      return false;
+    }
+
     return d.is_active && !d.is_suspended && d.verification_status === 'VERIFIED' && d.is_online;
   }
 }

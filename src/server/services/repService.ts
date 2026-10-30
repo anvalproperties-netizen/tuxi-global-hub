@@ -72,15 +72,15 @@ export class RepService {
   }
 
   /**
-   * Authoritative server-side 20 km territory boundary evaluation.
-   * Boundary rule: distance <= 20.000 km = INSIDE, distance > 20.000 km = OUTSIDE.
+   * Authoritative server-side 10 km territory boundary evaluation.
+   * Boundary rule: distance <= 10.000 km = INSIDE, distance > 10.000 km = OUTSIDE.
    */
   public static validateTerritory(
     hubLat: number,
     hubLng: number,
     bizLat: number,
     bizLng: number,
-    maxRadiusKm: number = 20.0
+    maxRadiusKm: number = 10.0
   ): { isWithin: boolean; exactDistanceKm: number } {
     const exactDistanceKm = this.calculateExactDistanceKm(hubLat, hubLng, bizLat, bizLng);
     return {
@@ -99,7 +99,7 @@ export class RepService {
     hubLng: number,
     bizLat: number,
     bizLng: number,
-    maxRadiusKm: number = 20.0
+    maxRadiusKm: number = 10.0
   ): Promise<{ isWithin: boolean; exactDistanceKm: number; engine: 'POSTGIS' | 'HAVERSINE' }> {
     if (process.env.SQL_HOST) {
       try {
@@ -191,7 +191,7 @@ export class RepService {
       const repProfileId = dbInstance.generateUuid();
       dbInstance.db.prepare(`
         INSERT INTO rep_profiles (id, user_id, birth_date, has_mobile_phone, has_mobile_data, has_own_transport, transport_details, hub_address_id, territory_radius_km)
-        VALUES (?, ?, ?, 1, 1, ?, ?, ?, 20.0)
+        VALUES (?, ?, ?, 1, 1, ?, ?, ?, 10.0)
       `).run(
         repProfileId,
         input.userId,
@@ -205,7 +205,7 @@ export class RepService {
       const territoryId = dbInstance.generateUuid();
       dbInstance.db.prepare(`
         INSERT INTO rep_territories (id, rep_profile_id, hub_latitude, hub_longitude, radius_meters)
-        VALUES (?, ?, ?, ?, 20000.0)
+        VALUES (?, ?, ?, ?, 10000.0)
       `).run(
         territoryId,
         repProfileId,
@@ -250,7 +250,7 @@ export class RepService {
         dbInstance.generateUuid(),
         input.userId,
         repProfileId,
-        JSON.stringify({ repProfileId, hubAddressId: addressId, territoryRadiusKm: 20.0 })
+        JSON.stringify({ repProfileId, hubAddressId: addressId, territoryRadiusKm: 10.0 })
       );
 
       dbInstance.db.exec('COMMIT;');
@@ -258,7 +258,7 @@ export class RepService {
       return {
         repProfileId,
         status: 'PENDING_VERIFICATION',
-        territoryRadiusKm: 20.0,
+        territoryRadiusKm: 10.0,
         termsAccepted: true
       };
     } catch (err) {
@@ -268,7 +268,7 @@ export class RepService {
   }
 
   /**
-   * Onboards a merchant business with duplicate protection and strict 20km server-side validation.
+   * Onboards a merchant business with duplicate protection and strict 10km server-side validation.
    */
   public static onboardBusiness(input: OnboardBusinessInput) {
     if (!input.ownerConsentObtained) {
@@ -293,11 +293,11 @@ export class RepService {
       repProfile.hub_longitude,
       input.address.latitude,
       input.address.longitude,
-      repProfile.territory_radius_km || 20.0
+      repProfile.territory_radius_km || 10.0
     );
 
     if (!isWithin) {
-      throw new Error(`OUT_OF_TERRITORY: Proposed business is ${exactDistanceKm.toFixed(3)} km away, which strictly exceeds the 20.000 km territory limit`);
+      throw new Error(`OUT_OF_TERRITORY: Proposed business is ${exactDistanceKm.toFixed(3)} km away, which strictly exceeds the 10.000 km territory limit`);
     }
 
     dbInstance.db.exec('BEGIN TRANSACTION;');

@@ -159,7 +159,16 @@ export class DeliveryService {
     try {
       await client.query('BEGIN;');
 
-      // 1. Verify Driver Eligibility (2C.3)
+      // 1. Verify Driver Eligibility (2C.3) and Vehicle Prohibitions
+      const driverCheck = await client.query('SELECT vehicle_type FROM driver_profiles WHERE id = $1;', [driverId]);
+      if (driverCheck.rows.length > 0) {
+        const vType = (driverCheck.rows[0].vehicle_type || '').toUpperCase();
+        if (vType.includes('BICYCLE') || (vType.includes('BIKE') && !vType.includes('MOTORBIKE'))) {
+          await client.query('ROLLBACK;');
+          throw new Error('BICYCLE_DELIVERY_PROHIBITED: Bicycles and electric bicycles are strictly prohibited from commercial delivery fulfillment.');
+        }
+      }
+
       const isEligible = await DriverService.isDriverEligible(driverId);
       if (!isEligible) {
         await client.query('ROLLBACK;');

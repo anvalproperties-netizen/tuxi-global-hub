@@ -27,7 +27,9 @@ import {
   LoyaltyActivityItem,
   GroupOrderSession,
   GroupOrderMember,
-  SplitPaymentMode
+  SplitPaymentMode,
+  RepApplicationState,
+  DriverApplicationState
 } from '../types';
 import { calculateDistanceKm, isWithinTerritory } from '../utils/geospatial';
 import { GLOBAL_LAUNCHED_CITIES, detectUserLocation, formatCurrency } from '../utils/currencyAndLocation';
@@ -161,6 +163,17 @@ interface TuxiContextType {
   logout: () => Promise<void>;
   refreshEatsBusinesses: () => Promise<void>;
   refreshOrders: () => Promise<void>;
+
+  // Ecosystem Role Application & Onboarding
+  repApplication: RepApplicationState | null;
+  driverApplication: DriverApplicationState | null;
+  isRepApplicantModalOpen: boolean;
+  setIsRepApplicantModalOpen: (open: boolean) => void;
+  isDriverApplicantModalOpen: boolean;
+  setIsDriverApplicantModalOpen: (open: boolean) => void;
+  submitRepApplication: (data: any) => Promise<void>;
+  submitDriverApplication: (data: any) => Promise<void>;
+  refreshApplicantStatus: () => Promise<void>;
 }
 
 const DEFAULT_MONETIZATION: PlatformMonetizationSettings = {
@@ -181,7 +194,7 @@ const DEFAULT_CONFIG: PlatformConfig = {
   level2AutoApprovalEnabled: true,
   autoApprovalMinConfidence: 0.90,
   territoryStrictEnforcement: true,
-  repDefaultRadiusKm: 20,
+  repDefaultRadiusKm: 10,
   repAcquisitionBounty: 150,
   repRevSharePercent: 1.5,
   activeCityId: 'city-london',
@@ -205,7 +218,7 @@ const DEFAULT_REP: Rep = {
   hubAddress: '42 Redchurch Street, Shoreditch, London E2 7DD',
   city: 'London',
   country: 'United Kingdom',
-  territoryRadiusKm: 20,
+  territoryRadiusKm: 10,
   totalAcquiredBusinesses: 14,
   liveBusinessesCount: 11,
   totalCommissionEarned: 3450,
@@ -227,7 +240,7 @@ const OTHER_REPS: Rep[] = [
     hubAddress: '15 King Street, Hammersmith, London W6 9HR',
     city: 'London',
     country: 'United Kingdom',
-    territoryRadiusKm: 20,
+    territoryRadiusKm: 10,
     totalAcquiredBusinesses: 19,
     liveBusinessesCount: 17,
     totalCommissionEarned: 4890,
@@ -246,7 +259,7 @@ const OTHER_REPS: Rep[] = [
     hubAddress: 'Kloof Street, Gardens, Cape Town, 8001',
     city: 'Cape Town',
     country: 'South Africa',
-    territoryRadiusKm: 20,
+    territoryRadiusKm: 10,
     totalAcquiredBusinesses: 12,
     liveBusinessesCount: 10,
     totalCommissionEarned: 38200,
@@ -618,8 +631,8 @@ const INITIAL_DRIVERS: Driver[] = [
     phone: '+44 7700 900892',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&h=200&q=80',
     isOnline: true,
-    vehicleType: 'bicycle',
-    vehiclePlate: 'N/A',
+    vehicleType: 'scooter',
+    vehiclePlate: 'LD24-SCT',
     currentLocation: { lat: 51.5240, lng: -0.0810 },
     rating: 4.88,
     totalTrips: 412,
@@ -828,6 +841,112 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       // Graceful fallback for restricted storage environments
     }
+  };
+
+  // Ecosystem Role Application Modals & State
+  const [isRepApplicantModalOpen, setIsRepApplicantModalOpen] = useState<boolean>(false);
+  const [isDriverApplicantModalOpen, setIsDriverApplicantModalOpen] = useState<boolean>(false);
+
+  // Server-Authoritative Applicant State (Zero shared localStorage persistence)
+  const [repApplication, setRepApplication] = useState<RepApplicationState | null>(null);
+  const [driverApplication, setDriverApplication] = useState<DriverApplicationState | null>(null);
+
+  const refreshApplicantStatus = async () => {
+    try {
+      const token = safeGetStorage('tuxi_auth_token');
+      if (!token) {
+        setRepApplication(null);
+        setDriverApplication(null);
+        return;
+      }
+      const res = await fetch('/api/applicant/status', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRepApplication(data.repApplication);
+        setDriverApplication(data.driverApplication);
+      } else {
+        setRepApplication(null);
+        setDriverApplication(null);
+      }
+    } catch (err) {
+      console.warn('[Applicant Status Refresh]', err);
+    }
+  };
+
+  const submitRepApplication = async (data: any) => {
+    const token = safeGetStorage('tuxi_auth_token');
+    if (!token) throw new Error('UNAUTHENTICATED: Please log in before submitting an application');
+
+    const res = await fetch('/api/applicant/rep/apply', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        birthDate: data.birthDate,
+        contactPhone: data.contactPhone || data.phone || currentUser?.phone || '+27820000000',
+        hasMobilePhone: !!data.hasMobilePhone,
+        hasMobileData: !!data.hasMobileData,
+        hasOwnTransport: !!data.hasOwnTransport,
+        transportDetails: data.transportDetails || 'Personal Car',
+        residentialAddress: data.residentialAddress || {
+          line1: data.hubAddress?.streetLine1 || '123 Main Rd',
+          city: data.hubAddress?.city || 'Cape Town',
+          postalCode: data.hubAddress?.postalCode || '8001',
+          country: 'ZA'
+        },
+        hubAddress: {
+          line1: data.hubAddress?.streetLine1 || 'Registered Home Hub',
+          city: data.hubAddress?.city || 'Cape Town',
+          postalCode: data.hubAddress?.postalCode || '8001',
+          latitude: data.hubAddress?.latitude || -33.9249,
+          longitude: data.hubAddress?.longitude || 18.4241
+        },
+        termsVersionId: 'v2.1-rep-terms-2026'
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Rep application submission failed');
+    }
+
+    await refreshApplicantStatus();
+  };
+
+  const submitDriverApplication = async (data: any) => {
+    const token = safeGetStorage('tuxi_auth_token');
+    if (!token) throw new Error('UNAUTHENTICATED: Please log in before submitting an application');
+
+    const res = await fetch('/api/applicant/driver/apply', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        transportType: data.transportType,
+        licenseNumber: data.licenseNumber,
+        vehiclePlate: data.vehiclePlate,
+        vehicleMakeModel: data.vehicleMakeModel,
+        contactPhone: data.phone || currentUser?.phone || '+27820000000',
+        idDocumentNumber: data.idDocumentNumber,
+        safetyGearConfirmed: data.safetyGearConfirmed !== false,
+        backgroundCheckConsent: data.backgroundCheckConsent !== false,
+        safetyCharterConsent: data.safetyCharterConsent !== false,
+        roadworthyInsuranceConfirmed: data.roadworthyInsuranceConfirmed !== false
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Driver application submission failed');
+    }
+
+    await refreshApplicantStatus();
   };
 
   // Global Theme Mode (Dark / Light) with session persistence
@@ -1160,6 +1279,10 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (currentUser) {
       refreshOrders();
+      refreshApplicantStatus();
+    } else {
+      setRepApplication(null);
+      setDriverApplication(null);
     }
   }, [currentUser]);
 
@@ -1169,6 +1292,8 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (_) {}
     ApiClient.clearToken();
     setCurrentUser(null);
+    setRepApplication(null);
+    setDriverApplication(null);
     setActiveRoleState('customer');
   };
 
@@ -1381,7 +1506,19 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Automatically pick up where and in which country & city the app is being used via AI on load
   useEffect(() => {
     const hasManualOverride = localStorage.getItem('tuxi_user_manual_city_selection');
+    const cached = getCachedAILocation();
     if (!hasManualOverride) {
+      if (cached) {
+        // Cached location exists from recent detection; apply without redundant network call
+        const existing = globalCities.find(c => 
+          c.countryCode.toUpperCase() === cached.countryCode.toUpperCase() &&
+          (c.city.toLowerCase() === cached.city.toLowerCase() || c.city.toLowerCase().includes(cached.city.toLowerCase()))
+        );
+        if (existing) {
+          switchGlobalCity(existing.id);
+        }
+        return;
+      }
       triggerAILocationDetection().catch(e => console.warn('[Auto AI Location Init]', e));
     }
   }, []);
@@ -1691,7 +1828,7 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const reason = killSwitchActive
         ? 'Emergency AI Kill Switch active. Manual review required.'
         : !isWithin
-        ? `Location is ${distanceKm} km away, exceeding Rep 20 km territory boundary!`
+        ? `Location is ${distanceKm} km away, exceeding Rep 10 km territory boundary!`
         : 'Pending document verification or owner signature review.';
 
       logAIAction({
@@ -1716,7 +1853,7 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: reason,
         evidence: `Distance: ${distanceKm} km. Hub: ${currentRep.hubAddress}. Business: ${newBiz.address}.`,
         aiSummary: !isWithin 
-          ? 'Backend geospatial logic flagged this submission outside 20 km acquisition circle.'
+          ? 'Backend geospatial logic flagged this submission outside 10 km acquisition circle.'
           : 'Submission holds missing attributes or requires manual admin stamp.',
         confidenceScore: isWithin ? 0.85 : 0.35,
         recommendedNextStep: !isWithin ? 'Reject claim or grant administrative waiver.' : 'Review document attachments and approve.',
@@ -2309,6 +2446,15 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeGroupMember,
         updateSplitMode,
         cancelGroupOrder,
+        repApplication,
+        driverApplication,
+        isRepApplicantModalOpen,
+        setIsRepApplicantModalOpen,
+        isDriverApplicantModalOpen,
+        setIsDriverApplicantModalOpen,
+        submitRepApplication,
+        submitDriverApplication,
+        refreshApplicantStatus,
       }}
     >
       {children}

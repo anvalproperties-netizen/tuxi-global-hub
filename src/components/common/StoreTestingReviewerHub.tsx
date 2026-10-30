@@ -369,7 +369,7 @@ export const StoreTestingReviewerHub: React.FC<StoreTestingReviewerHubProps> = (
                   {
                     role: 'rep' as const,
                     title: 'Territory Representative Persona',
-                    desc: 'Pre-loaded with 20km geo-territory boundaries, commission ledger, and merchant acquisition pipeline.',
+                    desc: 'Pre-loaded with 10km geo-territory boundaries, commission ledger, and merchant acquisition pipeline.',
                     actionLabel: 'Switch to Rep Hub'
                   },
                   {

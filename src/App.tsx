@@ -14,6 +14,8 @@ import { TermsOfServiceModal } from './components/common/TermsOfServiceModal';
 import { DataSafetyModal } from './components/common/DataSafetyModal';
 import { AccountDeletionModal } from './components/common/AccountDeletionModal';
 import { StoreTestingReviewerHub } from './components/common/StoreTestingReviewerHub';
+import { RepApplicationModal } from './components/rep/RepApplicationModal';
+import { DriverApplicationModal } from './components/driver/DriverApplicationModal';
 import { 
   getStoredGoogleMapsApiKey, 
   isValidGoogleMapsKey, 
@@ -275,8 +277,31 @@ const AppRouter: React.FC<AppRouterProps> = ({
   );
 };
 
+const GlobalEcosystemModals: React.FC = () => {
+  const { 
+    isRepApplicantModalOpen, 
+    setIsRepApplicantModalOpen, 
+    isDriverApplicantModalOpen, 
+    setIsDriverApplicantModalOpen 
+  } = useTuxi();
+
+  return (
+    <>
+      <RepApplicationModal
+        isOpen={isRepApplicantModalOpen}
+        onClose={() => setIsRepApplicantModalOpen(false)}
+      />
+      <DriverApplicationModal
+        isOpen={isDriverApplicantModalOpen}
+        onClose={() => setIsDriverApplicantModalOpen(false)}
+      />
+    </>
+  );
+};
+
   const appContent = (
     <TuxiProvider>
+      <GlobalEcosystemModals />
       <AppRouter
         isAdminView={isAdminView}
         navigateToMarketplace={navigateToMarketplace}

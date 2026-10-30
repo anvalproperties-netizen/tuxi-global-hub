@@ -183,17 +183,38 @@ export function getIntelligentFallback(
   };
 }
 
+// In-memory cache to prevent repetitive calls to Gemini
+interface CachedLocationEntry {
+  data: LocationDetectionResponse;
+  expiresAt: number;
+}
+const locationMemoryCache = new Map<string, CachedLocationEntry>();
+let quotaExhaustedUntil = 0;
+
 export async function processAILocationDetection(
   payload: LocationDetectionRequest
 ): Promise<LocationDetectionResponse> {
   const { coords, timezone, locale, languages, clientIp } = payload;
   const apiKey = process.env.GEMINI_API_KEY;
 
-  if (!apiKey) {
-    return {
+  // Generate cache key based on coarse coordinates and timezone/locale
+  const roundedLat = coords?.lat != null ? Math.round(coords.lat * 100) / 100 : 'none';
+  const roundedLng = coords?.lng != null ? Math.round(coords.lng * 100) / 100 : 'none';
+  const cacheKey = `${timezone || 'notz'}_${locale || 'noloc'}_${roundedLat}_${roundedLng}_${clientIp || ''}`;
+
+  // Check in-memory cache first (valid for 12 hours)
+  const cached = locationMemoryCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  // If currently in quota exhaustion cooldown or no API key, use intelligent fallback directly
+  if (!apiKey || Date.now() < quotaExhaustedUntil) {
+    const fallback = {
       ...getIntelligentFallback(coords, timezone, locale),
-      source: 'intelligent_signal_fallback'
+      source: 'intelligent_signal_fallback' as const
     };
+    return fallback;
   }
 
   try {
@@ -262,16 +283,41 @@ Instructions:
     });
 
     const parsed = JSON.parse(response.text?.trim() || '{}');
-    return {
+    const result: LocationDetectionResponse = {
       ...parsed,
       source: 'gemini_ai_geospatial'
     };
+
+    // Cache the successful detection for 12 hours
+    locationMemoryCache.set(cacheKey, {
+      data: result,
+      expiresAt: Date.now() + 12 * 60 * 60 * 1000
+    });
+
+    return result;
   } catch (err: any) {
-    console.error('[AI Location Detection Processor Fallback]', err?.message);
-    return {
+    const errMsg = err?.message || '';
+    const isQuotaError = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('Quota exceeded');
+
+    if (isQuotaError) {
+      // Cooldown for 1 hour to prevent flooding the exhausted endpoint
+      quotaExhaustedUntil = Date.now() + 60 * 60 * 1000;
+      console.warn('[AI Location Detection Notice] Gemini daily quota limit reached; activating high-fidelity deterministic fallback.');
+    } else {
+      console.warn('[AI Location Detection Notice] Gemini service notice; using intelligent signal fallback:', errMsg);
+    }
+
+    const fallback: LocationDetectionResponse = {
       ...getIntelligentFallback(coords, timezone, locale),
-      source: 'ai_error_fallback',
-      error: err?.message
+      source: 'intelligent_signal_fallback'
     };
+
+    // Cache the fallback so we don't immediately retry and log repeatedly
+    locationMemoryCache.set(cacheKey, {
+      data: fallback,
+      expiresAt: Date.now() + 60 * 60 * 1000
+    });
+
+    return fallback;
   }
 }

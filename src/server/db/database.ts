@@ -126,7 +126,7 @@ export class TuxiDatabase {
         transport_details TEXT,
         verification_status TEXT NOT NULL DEFAULT 'PENDING',
         hub_address_id TEXT NOT NULL,
-        territory_radius_km REAL NOT NULL DEFAULT 20.0,
+        territory_radius_km REAL NOT NULL DEFAULT 10.0,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -138,7 +138,7 @@ export class TuxiDatabase {
         rep_profile_id TEXT UNIQUE NOT NULL,
         hub_latitude REAL NOT NULL,
         hub_longitude REAL NOT NULL,
-        radius_meters REAL NOT NULL DEFAULT 20000.0,
+        radius_meters REAL NOT NULL DEFAULT 10000.0,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         FOREIGN KEY (rep_profile_id) REFERENCES rep_profiles(id) ON DELETE CASCADE
       );
@@ -291,7 +291,74 @@ export class TuxiDatabase {
         current_latitude REAL,
         current_longitude REAL,
         last_ping_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS rep_applications (
+        id TEXT PRIMARY KEY,
+        user_id TEXT UNIQUE NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PENDING_REVIEW',
+        birth_date TEXT NOT NULL,
+        contact_phone TEXT NOT NULL,
+        has_mobile_phone INTEGER NOT NULL DEFAULT 1,
+        has_mobile_data INTEGER NOT NULL DEFAULT 1,
+        has_own_transport INTEGER NOT NULL DEFAULT 1,
+        transport_details TEXT NOT NULL,
+        residential_address_line1 TEXT NOT NULL,
+        residential_city TEXT NOT NULL,
+        residential_postal_code TEXT NOT NULL,
+        residential_country TEXT NOT NULL DEFAULT 'ZA',
+        proof_of_residence_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
+        hub_street_line1 TEXT NOT NULL,
+        hub_city TEXT NOT NULL,
+        hub_postal_code TEXT NOT NULL,
+        hub_latitude REAL NOT NULL,
+        hub_longitude REAL NOT NULL,
+        territory_radius_km REAL NOT NULL DEFAULT 10.0,
+        terms_version_id TEXT NOT NULL DEFAULT 'v2.1-rep-terms-2026',
+        terms_accepted_at TEXT NOT NULL DEFAULT (datetime('now')),
+        banking_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
+        required_documents_status TEXT NOT NULL DEFAULT '{"id_document": "SUBMITTED", "proof_of_residence": "UNVERIFIED", "banking_verification": "UNVERIFIED"}',
+        rejection_reason TEXT,
+        review_notes TEXT,
+        reviewed_by TEXT,
+        reviewed_at TEXT,
+        submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS driver_applications (
+        id TEXT PRIMARY KEY,
+        user_id TEXT UNIQUE NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PENDING_REVIEW',
+        transport_type TEXT NOT NULL CHECK (transport_type IN ('MOTORCYCLE', 'CAR', 'BAKKIE', 'LIGHT_TRUCK')),
+        license_number TEXT NOT NULL,
+        vehicle_plate TEXT NOT NULL,
+        vehicle_make_model TEXT NOT NULL,
+        contact_phone TEXT NOT NULL,
+        id_document_number TEXT NOT NULL,
+        residential_address_line1 TEXT,
+        residential_city TEXT,
+        residential_postal_code TEXT,
+        proof_of_residence_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
+        safety_gear_confirmed INTEGER NOT NULL DEFAULT 1,
+        background_check_consent INTEGER NOT NULL DEFAULT 1,
+        safety_charter_consent INTEGER NOT NULL DEFAULT 1,
+        roadworthy_insurance_confirmed INTEGER NOT NULL DEFAULT 1,
+        facial_liveness_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
+        transport_selfie_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
+        vehicle_documents_status TEXT NOT NULL DEFAULT 'PENDING_REVIEW',
+        banking_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
+        required_documents_status TEXT NOT NULL DEFAULT '{"id_document": "SUBMITTED", "drivers_license": "SUBMITTED", "proof_of_residence": "UNVERIFIED", "vehicle_roadworthy": "PENDING_REVIEW", "banking_verification": "UNVERIFIED"}',
+        rejection_reason TEXT,
+        review_notes TEXT,
+        reviewed_by TEXT,
+        reviewed_at TEXT,
+        submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
 
@@ -359,7 +426,7 @@ export class TuxiDatabase {
         rule_version INTEGER NOT NULL DEFAULT 1,
         name TEXT NOT NULL,
         target_role TEXT NOT NULL DEFAULT 'TUXI_REP',
-        percentage_rate REAL NOT NULL CHECK (percentage_rate >= 0.0 AND percentage_rate <= 0.03), -- Up to 3%
+        percentage_rate REAL NOT NULL CHECK (target_role != 'TUXI_REP' OR percentage_rate = 0.01), -- Exact 1.0% Rep Commission Invariant
         effective_from TEXT NOT NULL,
         effective_to TEXT,
         business_type TEXT,
@@ -573,18 +640,24 @@ export class TuxiDatabase {
       `).run(
         termsId,
         'sha256-a9f8b1c4e2d3f7a8b9c0d1e2f3a4b5c6',
-        'Official TUXI Rep Terms: Reps must be 18 years or older, maintain own mobile phone and cellular data, and operate within approved 20km territory hub. Commissions up to 3% on qualifying sales.'
+        'Official TUXI Rep Terms: Reps must be 18 years or older, maintain own mobile phone and cellular data, and operate within approved 10km territory hub. Commissions of exactly 1.0% on qualifying Rep-attributed product sales.'
       );
     }
 
-    // Seed default commission rule for TUXI Rep (2.5% default, up to 3% max)
-    const existingRule = this.db.prepare("SELECT id FROM commission_rules WHERE is_active = 1").get();
+    // Ensure active TUXI Rep commission rule is exactly 1.0% (0.0100)
+    const existingRule = this.db.prepare("SELECT id FROM commission_rules WHERE target_role = 'TUXI_REP' AND is_active = 1").get() as any;
     if (!existingRule) {
       const ruleId = this.generateUuid();
       this.db.prepare(`
         INSERT INTO commission_rules (id, rule_version, name, target_role, percentage_rate, effective_from, is_active)
-        VALUES (?, 1, 'Standard TUXI Rep Qualifying Sales Rule', 'TUXI_REP', 0.025, datetime('now'), 1)
+        VALUES (?, 1, 'Standard TUXI Rep Qualifying Sales Rule (1.0% Exact)', 'TUXI_REP', 0.01, datetime('now'), 1)
       `).run(ruleId);
+    } else {
+      this.db.prepare(`
+        UPDATE commission_rules 
+        SET percentage_rate = 0.01, name = 'Standard TUXI Rep Qualifying Sales Rule (1.0% Exact)'
+        WHERE target_role = 'TUXI_REP' AND is_active = 1
+      `).run();
     }
 
   }

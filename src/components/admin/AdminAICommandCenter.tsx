@@ -11,6 +11,7 @@ import { InteractiveMap } from '../common/InteractiveMap';
 import { AIInsightsDashboard } from './AIInsightsDashboard';
 import { AIPersonalizedTipsCarousel } from './AIPersonalizedTipsCarousel';
 import { IntegrationsManagementConsole } from './IntegrationsManagementConsole';
+import { ApplicantReviewPanel } from './ApplicantReviewPanel';
 import { 
   ShieldAlert, 
   Sliders, 
@@ -1138,16 +1139,23 @@ export const AdminAICommandCenter: React.FC = () => {
 
       {/* TAB 4: APPLICATION DEEP DIVE REVIEW */}
       {activeTab === 'review' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Application Review &amp; Document Verification</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Inspect raw merchant documents side-by-side with OCR extracted fields and geospatial checks.
-              </p>
-            </div>
-            <span className="text-xs text-slate-500">{businesses.length} Applications</span>
+        <div className="space-y-6">
+          {/* Statutory Driver & Rep Applicant Review Queue */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xs">
+            <ApplicantReviewPanel />
           </div>
+
+          {/* Merchant Premises & Acquisition Review */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Merchant Application &amp; Premises Review</h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Inspect raw merchant documents side-by-side with OCR extracted fields and geospatial checks.
+                </p>
+              </div>
+              <span className="text-xs text-slate-500 font-mono">{businesses.length} Merchants</span>
+            </div>
 
           <div className="space-y-4">
             {businesses.map(biz => (
@@ -1201,6 +1209,7 @@ export const AdminAICommandCenter: React.FC = () => {
             ))}
           </div>
         </div>
+      </div>
       )}
 
       {/* TAB 5: FINANCE & SETTLEMENTS */}

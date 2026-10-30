@@ -22,7 +22,11 @@ export const AuthorizedProfileSwitcher: React.FC = () => {
     activeRole, 
     setActiveRole, 
     logout,
-    cart
+    cart,
+    setIsRepApplicantModalOpen,
+    setIsDriverApplicantModalOpen,
+    repApplication,
+    driverApplication
   } = useTuxi();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -214,27 +218,79 @@ export const AuthorizedProfileSwitcher: React.FC = () => {
           {unassignedRoleConfigs.length > 0 && (
             <div className="py-2 px-2">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-2 pb-1.5 block">
-                Apply for Ecosystem Roles
+                Ecosystem &amp; Partner Roles
               </span>
 
               <div className="space-y-1">
-                {unassignedRoleConfigs.map(({ role, label, icon }) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => {
-                      setIsOpen(false);
+                {unassignedRoleConfigs.map(({ role, label, icon }) => {
+                  const isRep = role === 'rep';
+                  const isDriver = role === 'driver';
+                  const isRepPending = isRep && (repApplication?.status === 'PENDING' || repApplication?.status === 'PENDING_REVIEW');
+                  const isDriverPending = isDriver && (driverApplication?.status === 'PENDING' || driverApplication?.status === 'PENDING_REVIEW');
+                  const isRepChanges = isRep && repApplication?.status === 'CHANGES_REQUESTED';
+                  const isDriverChanges = isDriver && driverApplication?.status === 'CHANGES_REQUESTED';
+
+                  const handleRoleApplicationClick = () => {
+                    setIsOpen(false);
+                    if (isRep) {
+                      setIsRepApplicantModalOpen(true);
+                    } else if (isDriver) {
+                      setIsDriverApplicantModalOpen(true);
+                    } else {
                       setShowApplyModal(label);
-                    }}
-                    className="w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 text-left transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2">
-                      {icon}
-                      <span>Apply as {label}</span>
-                    </div>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-                ))}
+                    }
+                  };
+
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={handleRoleApplicationClick}
+                      className="w-full px-2.5 py-2 rounded-xl flex items-center justify-between text-left transition-colors cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">
+                          {icon}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block truncate font-medium text-xs">
+                            {isRepChanges || isDriverChanges
+                              ? `${label} (Corrections Requested)`
+                              : isRepPending
+                              ? 'TUXI Rep (Application In Review)'
+                              : isDriverPending
+                              ? 'Delivery Driver (Application In Review)'
+                              : `Apply as ${label}`}
+                          </span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 block truncate">
+                            {isRep
+                              ? '10 km territory merchant acquisition'
+                              : isDriver
+                              ? 'Motorcycle, Car, Bakkie, Light Truck'
+                              : 'Verified merchant onboarding'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 ml-2">
+                        {isRepChanges || isDriverChanges ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400">
+                            ACTION REQ
+                          </span>
+                        ) : isRepPending || isDriverPending ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400">
+                            IN REVIEW
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center gap-0.5">
+                            <span>APPLY</span>
+                            <ArrowUpRight className="w-2.5 h-2.5" />
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

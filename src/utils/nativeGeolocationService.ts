@@ -192,7 +192,7 @@ export function calculateHaversineDistanceMeters(
 }
 
 /**
- * Client-side boundary pre-check against TUXI Rep 20 km territory rule.
+ * Client-side boundary pre-check against TUXI Rep 10 km territory rule.
  * Device coordinates can never override the server-side PostGIS boundary.
  */
 export function verifyCoordinatesAgainstRepTerritory(
@@ -200,7 +200,7 @@ export function verifyCoordinatesAgainstRepTerritory(
   hubLng: number,
   targetLat: number,
   targetLng: number,
-  maxMeters = 20000.0
+  maxMeters = 10000.0
 ): { isWithin: boolean; distanceMeters: number; maxAllowedMeters: number } {
   const distanceMeters = calculateHaversineDistanceMeters(hubLat, hubLng, targetLat, targetLng);
   return {

@@ -31,7 +31,6 @@ import {
   RotateCcw,
   Sparkles,
   Layers,
-  Bike,
   Store,
   Home,
   Check,
@@ -471,7 +470,7 @@ export const LiveOrderDeliveryMap: React.FC<LiveOrderDeliveryMapProps> = ({
                     {driver?.avatar ? (
                       <img src={driver.avatar} alt={driver.name} className="w-full h-full object-cover" />
                     ) : (
-                      <Bike className="w-5 h-5 text-indigo-400" />
+                      <Truck className="w-5 h-5 text-indigo-400" />
                     )}
                   </div>
                 </div>
@@ -486,7 +485,7 @@ export const LiveOrderDeliveryMap: React.FC<LiveOrderDeliveryMapProps> = ({
                 <div className="p-1 text-xs text-slate-800 space-y-1">
                   <span className="font-bold block">{driver?.name || 'TUXI Courier'}</span>
                   <p className="text-[11px] text-slate-500">
-                    Vehicle: {driver?.vehicleType || 'Electric E-Bike'} ({driver?.vehiclePlate || 'TUXI-EV'})
+                    Vehicle: {driver?.vehicleType ? (driver.vehicleType.charAt(0).toUpperCase() + driver.vehicleType.slice(1)) : 'Motorcycle'} ({driver?.vehiclePlate || 'LD24-TUX'})
                   </p>
                   <div className="text-[11px] font-mono text-emerald-600 font-bold">
                     {distanceKm.toFixed(1)} km away · ~{etaMinutes} mins
@@ -629,7 +628,7 @@ export const LiveOrderDeliveryMap: React.FC<LiveOrderDeliveryMapProps> = ({
               </span>
             </div>
             <p className="text-slate-500 text-[11px] mt-0.5">
-              Assigned Courier · Electric Cargo E-Bike (Zero-Emissions)
+              Assigned Courier · Commercial Delivery ({driver?.vehicleType ? (driver.vehicleType.charAt(0).toUpperCase() + driver.vehicleType.slice(1)) : 'Motorcycle'})
             </p>
           </div>
         </div>

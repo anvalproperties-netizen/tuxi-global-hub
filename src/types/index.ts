@@ -443,7 +443,7 @@ export interface Driver {
   phone: string;
   avatar: string;
   isOnline: boolean;
-  vehicleType: 'bicycle' | 'scooter' | 'car' | 'van';
+  vehicleType: 'motorcycle' | 'scooter' | 'car' | 'bakkie' | 'van' | 'light_truck';
   vehiclePlate: string;
   currentLocation: GeoPoint;
   rating: number;
@@ -471,7 +471,7 @@ export interface Rep {
   hubAddress: string;
   city: string;
   country: string;
-  territoryRadiusKm: number; // 20km by default
+  territoryRadiusKm: number; // Strictly 10km radius from approved hub
   totalAcquiredBusinesses: number;
   liveBusinessesCount: number;
   totalCommissionEarned: number;
@@ -546,8 +546,8 @@ export interface PlatformConfig {
   aiMasterKillSwitch: boolean; // Pause all automatic approvals
   level2AutoApprovalEnabled: boolean;
   autoApprovalMinConfidence: number; // e.g. 0.90 (90%)
-  territoryStrictEnforcement: boolean;
-  repDefaultRadiusKm: number; // 20 km
+  territoryStrictEnforcement: true;
+  repDefaultRadiusKm: number; // Strictly 10 km
   repAcquisitionBounty: number; // e.g. $150 or £150
   repRevSharePercent: number; // 1.5%
   activeCityId: string;
@@ -608,3 +608,27 @@ export interface PreviouslyViewedItem {
   imageUrl?: string;
   viewedAt: string;
 }
+
+// Rep & Driver Application States
+export interface RepApplicationState {
+  id?: string;
+  status: 'NONE' | 'DRAFT' | 'PENDING' | 'PENDING_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'REJECTED';
+  submittedAt?: string;
+  hubAddress?: string;
+  transportDetails?: string;
+  territoryRadiusKm: number; // strictly 10.0
+  rejectionReason?: string;
+  reviewNotes?: string;
+}
+
+export interface DriverApplicationState {
+  id?: string;
+  status: 'NONE' | 'DRAFT' | 'PENDING' | 'PENDING_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'REJECTED';
+  submittedAt?: string;
+  transportType?: 'motorcycle' | 'car' | 'bakkie' | 'light_truck' | 'MOTORCYCLE' | 'CAR' | 'BAKKIE' | 'LIGHT_TRUCK';
+  vehiclePlate?: string;
+  licenseNumber?: string;
+  rejectionReason?: string;
+  reviewNotes?: string;
+}
+

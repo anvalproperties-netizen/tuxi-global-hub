@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Semantic color palette - Light Mode */
+  --bg-app: #f8fafc;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-tertiary: #e2e8f0;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-modal: #ffffff;
+  --bg-input: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.95);
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
+  --border-subtle: #f1f5f9;
+
+  --accent-primary: #4f46e5;
+  --accent-primary-hover: #4338ca;
+  --accent-secondary: #06b6d4;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+
+  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 15px rgba(99, 102, 241, 0.15);
+
+  color-scheme: light;
+}
+
+.dark {
+  /* Semantic color palette - Dark Mode */
+  --bg-app: #090d16;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #111827;
+  --bg-card-hover: #1f2937;
+  --bg-modal: #0f172a;
+  --bg-input: #1e293b;
+  --bg-header: rgba(15, 23, 42, 0.95);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-inverse: #0f172a;
+
+  --border-primary: #1e293b;
+  --border-secondary: #334155;
+  --border-subtle: #1e293b;
+
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #818cf8;
+  --accent-secondary: #22d3ee;
+  --accent-success: #34d399;
+  --accent-warning: #fbbf24;
+  --accent-danger: #f87171;
+
+  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.25);
+
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global Dark Theme Component Overrides powered by CSS variables */
+.dark .bg-white:not([data-theme-ignore]) {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.dark .bg-slate-50:not([data-theme-ignore]) {
+  background-color: var(--bg-secondary);
+}
+
+.dark .bg-slate-100:not([data-theme-ignore]) {
+  background-color: var(--bg-tertiary);
+}
+
+.dark .text-slate-900:not([data-theme-ignore]) {
+  color: var(--text-primary);
+}
+
+.dark .text-slate-800:not([data-theme-ignore]) {
+  color: #e2e8f0;
+}
+
+.dark .text-slate-700:not([data-theme-ignore]) {
+  color: #cbd5e1;
+}
+
+.dark .text-slate-600:not([data-theme-ignore]) {
+  color: #94a3b8;
+}
+
+.dark .border-slate-200:not([data-theme-ignore]) {
+  border-color: var(--border-secondary);
+}
+
+.dark .border-slate-100:not([data-theme-ignore]) {
+  border-color: var(--border-primary);
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.dark select,
+.dark textarea {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border-color: var(--border-secondary);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--text-muted);
+}

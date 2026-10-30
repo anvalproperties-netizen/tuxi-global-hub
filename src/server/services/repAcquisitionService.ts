@@ -331,7 +331,7 @@ export class RepAcquisitionService {
         VALUES (
           uuid_generate_v4(), $1, $2, true, true,
           $3, $4, $5,
-          20.000, 'PENDING'
+          10.000, 'PENDING'
         )
         RETURNING *;
       `, [
@@ -350,7 +350,7 @@ export class RepAcquisitionService {
         )
         VALUES (
           uuid_generate_v4(), $1, $2::numeric, $3::numeric,
-          ST_SetSRID(ST_Point($3::float8, $2::float8), 4326), 20000.00
+          ST_SetSRID(ST_Point($3::float8, $2::float8), 4326), 10000.00
         );
       `, [repProfile.id, input.hubAddress.latitude, input.hubAddress.longitude]);
 
@@ -401,7 +401,7 @@ export class RepAcquisitionService {
       `, [
         input.userId,
         repProfile.id,
-        JSON.stringify({ repProfileId: repProfile.id, hubAddressId, territoryRadiusKm: 20.0 })
+        JSON.stringify({ repProfileId: repProfile.id, hubAddressId, territoryRadiusKm: 10.0 })
       ]);
 
       await client.query('COMMIT;');
@@ -409,7 +409,7 @@ export class RepAcquisitionService {
       return {
         repProfileId: repProfile.id,
         status: repProfile.verification_status,
-        territoryRadiusKm: 20.0,
+        territoryRadiusKm: 10.0,
         termsAccepted: true
       };
     } catch (err) {
@@ -435,8 +435,8 @@ export class RepAcquisitionService {
   }
 
   /**
-   * PostGIS authoritative 20 km territory check against the Rep's persisted hub.
-   * Boundary rule: ST_Distance(hub_geom::geography, target_geom::geography) <= 20000.0.
+   * PostGIS authoritative 10 km territory check against the Rep's persisted hub.
+   * Boundary rule: ST_Distance(hub_geom::geography, target_geom::geography) <= 10000.0.
    */
   public static async validateTerritory(
     repProfileId: string,
@@ -452,7 +452,7 @@ export class RepAcquisitionService {
           (ST_Distance(
             hub_geom::geography,
             ST_SetSRID(ST_Point($2::float8, $1::float8), 4326)::geography
-          ) <= 20000.0) AS is_within,
+          ) <= 10000.0) AS is_within,
           ST_Distance(
             hub_geom::geography,
             ST_SetSRID(ST_Point($2::float8, $1::float8), 4326)::geography
@@ -507,7 +507,7 @@ export class RepAcquisitionService {
     // 4. Territory check
     const terr = await this.validateTerritory(repProfile.id, input.latitude, input.longitude);
     if (!terr.isWithin) {
-      throw new Error(`OUT_OF_TERRITORY: Proposed business is ${terr.exactDistanceKm.toFixed(3)} km away, which strictly exceeds the 20.000 km territory limit`);
+      throw new Error(`OUT_OF_TERRITORY: Proposed business is ${terr.exactDistanceKm.toFixed(3)} km away, which strictly exceeds the 10.000 km territory limit`);
     }
 
     // 5. Insert Draft

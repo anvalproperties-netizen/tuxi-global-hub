@@ -30,8 +30,8 @@ export class PostgresAdapter {
   }
 
   /**
-   * Authoritative PostGIS 20 km territory calculation directly in the database engine.
-   * Strictly enforces geography ST_DWithin with a 20,000-metre radius limit.
+   * Authoritative PostGIS 10 km territory calculation directly in the database engine.
+   * Strictly enforces geography ST_DWithin with a 10,000-metre radius limit.
    * Falls back to Haversine great-circle calculation if PostgreSQL/PostGIS is unavailable.
    */
   public async validateTerritoryPostGIS(
@@ -39,7 +39,7 @@ export class PostgresAdapter {
     hubLng: number,
     targetLat: number,
     targetLng: number,
-    maxRadiusMeters: number = 20000.0
+    maxRadiusMeters: number = 10000.0
   ): Promise<{ isWithin: boolean; exactDistanceKm: number }> {
     try {
       const client = await this.pool.connect();

@@ -1140,12 +1140,12 @@ export class OrderService {
             if (ruleRes.rows.length > 0) {
               const rule = ruleRes.rows[0];
               const rawRate = parseFloat(rule.percentage_rate);
-              if (rawRate > 0.03) {
-                throw new Error(`COMMISSION_RATE_EXCEEDS_CAP: Commission rate ${rawRate} exceeds maximum allowable cap of 3%`);
+              if (rawRate !== 0.01) {
+                throw new Error(`INVALID_REP_COMMISSION_POLICY: Rep commission rate must be exactly 0.0100 (1.0%), received ${rawRate}`);
               }
-              const rate = Math.min(rawRate, 0.03);
+              const rate = 0.0100;
               const oFull = await client.query('SELECT subtotal_cents FROM orders WHERE id = $1;', [orderId]);
-              const subtotal = oFull.rows[0].subtotal_cents;
+              const subtotal = oFull.rows[0].subtotal_cents; // Strictly product subtotal; excludes delivery, tip, service fees
               const commissionCents = Math.round(subtotal * rate);
               // Deterministic idempotent key per delivered order prevents double-crediting
               const commKey = `comm-qual-${orderId}`;

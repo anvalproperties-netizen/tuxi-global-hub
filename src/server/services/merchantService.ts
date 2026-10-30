@@ -2390,7 +2390,7 @@ export class MerchantService {
       let repRatePct = 0;
 
       if (attrRes.rows.length > 0) {
-        repRatePct = parseFloat(attrRes.rows[0].percentage_rate || '0.025') * 100;
+        repRatePct = parseFloat(attrRes.rows[0].percentage_rate || '0.0100') * 100;
         repAttributionNote = `Acquired by verified TUXI Rep (${repRatePct.toFixed(2)}% qualifying sales allocation paid out of TUXI platform fee)`;
       }
 

@@ -17,13 +17,13 @@ export async function seedPhase2AEatsData() {
   try {
     await client.query('BEGIN;');
 
-    // 1. Configurable Commission Rule (2.5%)
+    // 1. Authoritative Commission Rule (Exact 1.0%)
     let cr = await client.query("SELECT id FROM commission_rules WHERE target_role = 'TUXI_REP' AND is_active = true LIMIT 1;");
     let commissionRuleId: string;
     if (cr.rows.length === 0) {
       const insCr = await client.query(`
         INSERT INTO commission_rules (id, rule_version, name, target_role, percentage_rate, effective_from, is_active)
-        VALUES (uuid_generate_v4(), 1, 'Standard TUXI Rep Qualifying Sales Rule', 'TUXI_REP', 0.0250, NOW(), true)
+        VALUES (uuid_generate_v4(), 1, 'Standard TUXI Rep Qualifying Sales Rule (1.0% Exact)', 'TUXI_REP', 0.0100, NOW(), true)
         RETURNING id;
       `);
       commissionRuleId = insCr.rows[0].id;

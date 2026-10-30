@@ -90,10 +90,10 @@ export const RepView: React.FC = () => {
     if (preset === 'in_bounds') {
       handleCoordsChange({ lat: 51.5160, lng: -0.0820 }, '120 Bishopsgate, London EC2M 4NR'); // ~1.0 km
     } else if (preset === 'near_edge') {
-      handleCoordsChange({ lat: 51.6500, lng: -0.0800 }, 'Enfield Town Centre, London EN2 6LN'); // ~14.2 km
+      handleCoordsChange({ lat: 51.5700, lng: -0.0800 }, 'Stamford Hill, London N16 6TR'); // ~5.4 km
     } else {
-      // 24 km away (Beyond 20km perimeter)
-      handleCoordsChange({ lat: 51.4100, lng: -0.3000 }, 'Kingston upon Thames, KT1 1JS'); // ~24.5 km
+      // 14.2 km away (Beyond 10km perimeter)
+      handleCoordsChange({ lat: 51.6500, lng: -0.0800 }, 'Enfield Town Centre, London EN2 6LN'); // ~14.2 km
     }
   };
 
@@ -325,7 +325,7 @@ export const RepView: React.FC = () => {
             }`}
           >
             <MapPin className="w-3.5 h-3.5" />
-            <span>20km Territory Radar</span>
+            <span>10km Territory Radar</span>
           </button>
           <button
             onClick={() => setActiveTab('commissions')}
@@ -351,7 +351,7 @@ export const RepView: React.FC = () => {
             <div className="hidden sm:flex items-center justify-between text-xs text-slate-500 font-medium mb-2">
               <span className={step >= 1 ? 'text-indigo-600 font-semibold' : ''}>1. Business Profile</span>
               <span aria-hidden="true">→</span>
-              <span className={step >= 2 ? 'text-indigo-600 font-semibold' : ''}>2. Location & 20km Check</span>
+              <span className={step >= 2 ? 'text-indigo-600 font-semibold' : ''}>2. Location & 10km Check</span>
               <span aria-hidden="true">→</span>
               <span className={step >= 3 ? 'text-indigo-600 font-semibold' : ''}>3. AI OCR & Catalog</span>
               <span aria-hidden="true">→</span>
@@ -361,7 +361,7 @@ export const RepView: React.FC = () => {
             {/* Mobile compact step counter */}
             <div className="flex sm:hidden items-center justify-between text-xs text-slate-700 font-medium mb-1.5">
               <span className="font-bold text-indigo-600">
-                Step {step} of 4: {step === 1 ? 'Business Profile' : step === 2 ? 'Location & 20km Check' : step === 3 ? 'AI OCR & Catalog' : 'Review & Consent'}
+                Step {step} of 4: {step === 1 ? 'Business Profile' : step === 2 ? 'Location & 10km Check' : step === 3 ? 'AI OCR & Catalog' : 'Review & Consent'}
               </span>
               <span className="text-[11px] text-slate-500 font-mono">
                 {Math.round((Math.min(step, 4) / 4) * 100)}%
@@ -508,14 +508,14 @@ export const RepView: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 2: Geospatial 20km Territory Enforcement */}
+          {/* STEP 2: Geospatial 10km Territory Enforcement */}
           {step === 2 && (
             <div className="space-y-5">
               <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">Step 2: Geospatial Territory Verification</h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Backend enforces maximum 20.0 km radius from your registered home hub.
+                    Backend enforces maximum 10.0 km radius from your registered home hub.
                   </p>
                 </div>
 
@@ -532,13 +532,13 @@ export const RepView: React.FC = () => {
                     onClick={() => setPresetLocation('near_edge')}
                     className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px]"
                   >
-                    Outer (14km)
+                    Outer (5.4km)
                   </button>
                   <button
                     onClick={() => setPresetLocation('out_of_bounds')}
                     className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded text-[11px] font-semibold"
                   >
-                    Breach (24km)
+                    Breach (14km)
                   </button>
                 </div>
               </div>
@@ -579,8 +579,8 @@ export const RepView: React.FC = () => {
                   </div>
                   <p className="text-xs mt-1 text-slate-600">
                     {isWithinBoundary
-                      ? 'Geospatial engine confirms this address lies inside your assigned 20 km acquisition circle. Eligible for autonomous approval.'
-                      : 'WARNING: This location exceeds the 20 km Rep acquisition boundary. Submission will be blocked from autonomous approval and sent to the Admin Exception Queue.'}
+                      ? 'Geospatial engine confirms this address lies inside your assigned 10 km acquisition circle. Eligible for autonomous approval.'
+                      : 'WARNING: This location exceeds the 10 km Rep acquisition boundary. Submission will be blocked from autonomous approval and sent to the Admin Exception Queue.'}
                   </p>
                 </div>
               </div>
@@ -842,7 +842,7 @@ export const RepView: React.FC = () => {
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-semibold">Rep Territory Distance</span>
                     <span className={`font-bold ${isWithinBoundary ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      {distanceKm} km {isWithinBoundary ? '(Within 20km)' : '(Out-of-Bounds)'}
+                      {distanceKm} km {isWithinBoundary ? '(Within 10km)' : '(Out-of-Bounds)'}
                     </span>
                   </div>
                   <div>
@@ -932,7 +932,7 @@ export const RepView: React.FC = () => {
                   </span>
                 ) : (
                   <span className="text-amber-700 font-semibold">
-                    ⚠️ Application routed to Admin Exception Queue. (Reason: {submissionSuccess.distanceFromRepHubKm && submissionSuccess.distanceFromRepHubKm > 20 ? 'Territory boundary breach' : 'Requires administrative document stamp'}).
+                    ⚠️ Application routed to Admin Exception Queue. (Reason: {submissionSuccess.distanceFromRepHubKm && submissionSuccess.distanceFromRepHubKm > 10 ? 'Territory boundary breach' : 'Requires administrative document stamp'}).
                   </span>
                 )}
               </p>
@@ -1006,7 +1006,7 @@ export const RepView: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {myBusinesses.map(biz => {
                   const dist = biz.distanceFromRepHubKm !== undefined ? biz.distanceFromRepHubKm : calculateDistanceKm(currentRep.hubLocation, biz.location);
-                  const isBreach = dist > 20;
+                  const isBreach = dist > 10;
                   const verifiedAmount = (biz as any).verifiedCommissionEarned;
 
                   return (
@@ -1068,7 +1068,7 @@ export const RepView: React.FC = () => {
         <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div>
-              <h2 className="text-base font-bold text-slate-900">20 km Acquisition Territory Radar</h2>
+              <h2 className="text-base font-bold text-slate-900">10 km Acquisition Territory Radar</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Official backend-enforced coverage area centered at your home hub ({currentRep.hubAddress}).
               </p>
@@ -1090,7 +1090,7 @@ export const RepView: React.FC = () => {
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <span className="text-slate-400 block text-[10px] uppercase font-semibold">Acquisition Rule</span>
               <span className="font-semibold text-slate-800">
-                You may travel anywhere, but businesses registered must physically reside within this 20km zone.
+                You may travel anywhere, but businesses registered must physically reside within this 10km zone.
               </span>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">

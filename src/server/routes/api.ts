@@ -18,6 +18,7 @@ import { authenticateToken, requireRole, AuthenticatedRequest } from '../middlew
 import { aiRouter } from './aiRouter.js';
 import { integrationsRouter } from './integrationsRouter.js';
 import { SyntheticPaymentHarness } from '../services/syntheticPaymentHarness.js';
+import { ApplicationService } from '../services/applicationService.js';
 
 export const apiRouter = Router();
 
@@ -452,7 +453,7 @@ apiRouter.get('/rep/territory-check', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'INVALID_COORDINATES' });
   }
 
-  const result = await RepService.validateTerritoryAuthoritative(hubLat, hubLng, bizLat, bizLng, 20.0);
+  const result = await RepService.validateTerritoryAuthoritative(hubLat, hubLng, bizLat, bizLng, 10.0);
   res.json(result);
 });
 
@@ -828,6 +829,79 @@ apiRouter.get('/admin/audit-logs', authenticateToken, requireRole('ADMIN', 'SUPE
     ? await AdminService.getAuditLogsPostgres(limit)
     : AdminService.getAuditLogs(limit);
   res.json({ logs });
+});
+
+// ==========================================
+// 8A. PHASE C1: SECURE APPLICANT PERSISTENCE & ADMIN REVIEW
+// ==========================================
+
+// Submit Rep Application (Authenticated, Derives identity from token)
+apiRouter.post('/applicant/rep/apply', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await ApplicationService.submitRepApplication(req.user!.userId, req.body);
+    const statusCode = result.isIdempotentReplay ? 200 : 201;
+    res.status(statusCode).json(result);
+  } catch (err: any) {
+    const status = err.message.includes('UNAUTHENTICATED') ? 401 : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// Submit Driver Application (Authenticated, Enforces approved transport, rejects bicycles)
+apiRouter.post('/applicant/driver/apply', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await ApplicationService.submitDriverApplication(req.user!.userId, req.body);
+    const statusCode = result.isIdempotentReplay ? 200 : 201;
+    res.status(statusCode).json(result);
+  } catch (err: any) {
+    const status = err.message.includes('UNAUTHENTICATED') ? 401 : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// Get Current User's Application Status (Cross-Device, Privacy-Isolated)
+apiRouter.get('/applicant/status', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const status = await ApplicationService.getApplicantStatus(req.user!.userId);
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin: List Applications
+apiRouter.get('/admin/applications', authenticateToken, requireRole('ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const list = await ApplicationService.listApplications(req.user!.userId, {
+      status: req.query.status as string,
+      roleType: req.query.roleType as any
+    });
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin: Review Application (Approve, Reject, or Request Changes)
+apiRouter.post('/admin/applications/:id/review', authenticateToken, requireRole('ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { roleType, decision, reason, reviewNotes, verifiedDocuments } = req.body;
+    if (!roleType || !decision) {
+      return res.status(400).json({ error: 'MISSING_REVIEW_FIELDS: roleType and decision are required' });
+    }
+    const result = await ApplicationService.reviewApplication(req.user!.userId, {
+      applicationId: req.params.id,
+      roleType,
+      decision,
+      reason,
+      reviewNotes,
+      verifiedDocuments
+    });
+    res.json(result);
+  } catch (err: any) {
+    const status = err.message.includes('INCOMPLETE_VERIFICATION') ? 422 : 400;
+    res.status(status).json({ error: err.message });
+  }
 });
 
 // ==========================================
