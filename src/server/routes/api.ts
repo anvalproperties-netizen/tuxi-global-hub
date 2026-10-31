@@ -19,6 +19,7 @@ import { aiRouter } from './aiRouter.js';
 import { integrationsRouter } from './integrationsRouter.js';
 import { SyntheticPaymentHarness } from '../services/syntheticPaymentHarness.js';
 import { ApplicationService } from '../services/applicationService.js';
+import { DocumentVaultService } from '../services/documentVaultService.js';
 
 export const apiRouter = Router();
 
@@ -900,6 +901,107 @@ apiRouter.post('/admin/applications/:id/review', authenticateToken, requireRole(
     res.json(result);
   } catch (err: any) {
     const status = err.message.includes('INCOMPLETE_VERIFICATION') ? 422 : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// 8A.1 PHASE C2: SECURE ENCRYPTED DOCUMENT VAULT (/api/documents/*)
+// ==========================================
+
+// Upload document into AES-256-GCM private vault
+apiRouter.post('/documents/upload', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { entityType, entityId, documentType, originalFilename, base64Data, mimeType } = req.body;
+
+    if (!entityType || !entityId || !documentType || !base64Data || !mimeType) {
+      return res.status(400).json({ 
+        error: 'MISSING_DOCUMENT_PAYLOAD', 
+        message: 'entityType, entityId, documentType, originalFilename, base64Data, and mimeType are mandatory' 
+      });
+    }
+
+    // Convert base64 data to buffer
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    const vault = DocumentVaultService.getInstance();
+    const record = await vault.storeDocument({
+      uploaderId: req.user!.userId,
+      entityType,
+      entityId,
+      documentType,
+      originalFilename: originalFilename || `${documentType.toLowerCase()}.bin`,
+      buffer,
+      mimeType
+    });
+
+    res.status(201).json({
+      success: true,
+      document: {
+        id: record.id,
+        documentType: record.document_type,
+        entityType: record.entity_type,
+        entityId: record.entity_id,
+        mimeType: record.file_mime_type,
+        sizeBytes: record.file_size_bytes,
+        originalFilename: record.original_filename,
+        sha256Hash: record.sha256_hash,
+        isVerified: record.is_verified,
+        createdAt: record.created_at
+      }
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'DOCUMENT_UPLOAD_FAILED' });
+  }
+});
+
+// Decrypt and stream document for preview (Strict ownership & Admin access only)
+apiRouter.get('/documents/:id/preview', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const vault = DocumentVaultService.getInstance();
+    const { buffer, mimeType, originalFilename } = await vault.retrieveDocument(
+      req.params.id,
+      req.user!.userId,
+      req.user!.roles
+    );
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Content-Security-Policy', "default-src 'none'");
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', `inline; filename="${originalFilename}"`);
+
+    res.send(buffer);
+  } catch (err: any) {
+    const status = err.message.includes('Unauthorized') ? 403 : err.message.includes('not found') ? 404 : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// List caller's compliance documents
+apiRouter.get('/documents/my', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const vault = DocumentVaultService.getInstance();
+    const docs = vault.getApplicantDocuments(req.user!.userId);
+    res.json({ documents: docs });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete document (Only owner or admin, only if unverified)
+apiRouter.delete('/documents/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const vault = DocumentVaultService.getInstance();
+    const deleted = vault.deleteDocument(req.params.id, req.user!.userId, req.user!.roles);
+    if (!deleted) {
+      return res.status(404).json({ error: 'DOCUMENT_NOT_FOUND' });
+    }
+    res.json({ success: true, message: 'Document securely deleted from vault' });
+  } catch (err: any) {
+    const status = err.message.includes('Unauthorized') ? 403 : 400;
     res.status(status).json({ error: err.message });
   }
 });

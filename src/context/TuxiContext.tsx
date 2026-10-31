@@ -196,7 +196,7 @@ const DEFAULT_CONFIG: PlatformConfig = {
   territoryStrictEnforcement: true,
   repDefaultRadiusKm: 10,
   repAcquisitionBounty: 150,
-  repRevSharePercent: 1.5,
+  repRevSharePercent: 1.0,
   activeCityId: 'city-london',
   activeCityName: 'London',
   activeCountry: 'United Kingdom',
@@ -886,6 +886,8 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
+        fullLegalName: data.fullLegalName,
+        idDocumentNumber: data.idDocumentNumber,
         birthDate: data.birthDate,
         contactPhone: data.contactPhone || data.phone || currentUser?.phone || '+27820000000',
         hasMobilePhone: !!data.hasMobilePhone,
@@ -905,7 +907,10 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
           latitude: data.hubAddress?.latitude || -33.9249,
           longitude: data.hubAddress?.longitude || 18.4241
         },
-        termsVersionId: 'v2.1-rep-terms-2026'
+        bankingDetails: data.bankingDetails,
+        proofOfResidenceDocId: data.proofOfResidenceDocId,
+        idDocumentDocId: data.idDocumentDocId,
+        termsVersionId: 'v2026.1'
       })
     });
 
@@ -928,12 +933,22 @@ export const TuxiProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
+        fullLegalName: data.fullLegalName,
         transportType: data.transportType,
         licenseNumber: data.licenseNumber,
         vehiclePlate: data.vehiclePlate,
         vehicleMakeModel: data.vehicleMakeModel,
         contactPhone: data.phone || currentUser?.phone || '+27820000000',
         idDocumentNumber: data.idDocumentNumber,
+        residentialAddress: data.residentialAddress,
+        bankingDetails: data.bankingDetails,
+        idDocumentDocId: data.idDocumentDocId,
+        proofOfResidenceDocId: data.proofOfResidenceDocId,
+        driverSelfieDocId: data.driverSelfieDocId,
+        driverTransportSelfieDocId: data.driverTransportSelfieDocId,
+        driversLicenseDocId: data.driversLicenseDocId,
+        vehicleRoadworthyDocId: data.vehicleRoadworthyDocId,
+        payloadCertDocId: data.payloadCertDocId,
         safetyGearConfirmed: data.safetyGearConfirmed !== false,
         backgroundCheckConsent: data.backgroundCheckConsent !== false,
         safetyCharterConsent: data.safetyCharterConsent !== false,

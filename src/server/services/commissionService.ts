@@ -65,7 +65,7 @@ export class CommissionService {
 
       const attribution = attrRes.rows[0];
 
-      // 4. Retrieve authoritative active commission rule (up to 3%)
+      // 4. Retrieve authoritative active commission rule (EXACTLY 1.0%)
       const ruleRes = await client.query(`
         SELECT id, percentage_rate
         FROM commission_rules
@@ -81,8 +81,12 @@ export class CommissionService {
 
       const rule = ruleRes.rows[0];
       const rate = parseFloat(rule.percentage_rate);
-      const qualifyingSubtotalCents = order.subtotal_cents;
-      const commissionCents = Math.round(qualifyingSubtotalCents * rate);
+      if (rate !== 0.01) {
+        await client.query('ROLLBACK;');
+        throw new Error(`INVALID_REP_COMMISSION_POLICY: Rep commission rate must be exactly 0.0100 (1.0%), received ${rate}`);
+      }
+      const qualifyingSubtotalCents = order.subtotal_cents; // Excludes delivery fees, service fees, tips
+      const commissionCents = Math.round(qualifyingSubtotalCents * 0.0100);
 
       const insRes = await client.query(`
         INSERT INTO commission_ledger (
@@ -184,7 +188,7 @@ export class CommissionService {
       };
     }
 
-    // 4. Retrieve authoritative active commission rule (up to 3%)
+    // 4. Retrieve authoritative active commission rule (EXACTLY 1.0%)
     const rule = dbInstance.db.prepare(`
       SELECT id, percentage_rate
       FROM commission_rules
@@ -197,9 +201,14 @@ export class CommissionService {
       throw new Error('NO_ACTIVE_COMMISSION_RULE');
     }
 
-    // Calculate commission amount in integer cents safely (e.g. 2.5% on 20,000 cents subtotal = 500 cents)
+    const rate = parseFloat(rule.percentage_rate);
+    if (rate !== 0.01) {
+      throw new Error(`INVALID_REP_COMMISSION_POLICY: Rep commission rate must be exactly 0.0100 (1.0%), received ${rate}`);
+    }
+
+    // Calculate commission amount in integer cents safely: strictly 1.0% on qualifying product subtotal
     const qualifyingSubtotalCents = order.subtotal_cents;
-    const commissionCents = Math.round(qualifyingSubtotalCents * rule.percentage_rate);
+    const commissionCents = Math.round(qualifyingSubtotalCents * 0.0100);
 
     dbInstance.db.exec('BEGIN TRANSACTION;');
     try {

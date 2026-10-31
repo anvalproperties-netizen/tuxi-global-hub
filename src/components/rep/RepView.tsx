@@ -1057,13 +1057,13 @@ export const RepView: React.FC = () => {
           </div>
 
           <div className="text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-t border-slate-100 pt-2.5">
-            <span>* Store sales volumes are illustrative demo figures. Actual rep commissions are verified per qualifying transaction at the standard 2.5% rate (up to 3% max per terms).</span>
-            <span className="font-mono text-slate-700 shrink-0 font-medium">Standard Rate: 2.5%</span>
+            <span>* Store sales volumes are illustrative demo figures. Actual rep commissions are verified per qualifying transaction at the exact 1.0% rate on eligible product subtotal.</span>
+            <span className="font-mono text-slate-700 shrink-0 font-medium">Standard Rate: 1.0%</span>
           </div>
         </div>
       )}
 
-      {/* TAB 3: 20KM TERRITORY RADAR */}
+      {/* TAB 3: 10KM TERRITORY RADAR */}
       {activeTab === 'territory' && (
         <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -1096,7 +1096,7 @@ export const RepView: React.FC = () => {
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <span className="text-slate-400 block text-[10px] uppercase font-semibold">Exclusivity &amp; Commission Terms</span>
               <span className="font-semibold text-slate-800">
-                Current standard commission rate is 2.5% on qualifying sales. Under official TUXI Rep Terms &amp; Conditions, TUXI Reps can earn up to 3% commission on qualifying sales made through TUXI by TUXI Eats restaurants or TUXI Shop stores they successfully signed up.
+                Authoritative Rep commission rate is exactly 1.0% on eligible Rep-attributed product subtotal (funded from TUXI's 3.0% Customer Admin Fee). 0% merchant sales commission; 0% commission on delivery charges.
               </span>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -1116,15 +1116,15 @@ export const RepView: React.FC = () => {
             <div>
               <h2 className="text-base font-bold text-slate-900">Rep Payout &amp; Commission Breakdown</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Current standard commission rate is <strong>2.5%</strong> on qualifying sales. TUXI Reps can earn up to 3% commission on qualifying sales made through TUXI by TUXI Eats restaurants or TUXI Shop stores they successfully signed up, subject to the TUXI Rep Terms &amp; Conditions.
+                Authoritative Rep commission rate is <strong>1.0%</strong> on eligible Rep-attributed product subtotal, paid out of TUXI's 3.0% Customer Admin Fee (TUXI retains 2.0% on attributed orders, 3.0% on unattributed).
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto text-xs font-mono">
               <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
-                Standard: 2.5%
+                Rep Rate: 1.0% Exact
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-bold">
-                Ceiling: Up to 3.0%
+                Admin Fee: 3.0%
               </span>
             </div>
           </div>
@@ -1148,9 +1148,9 @@ export const RepView: React.FC = () => {
 
             <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-emerald-700 font-medium">Standard Commission (2.5%)</div>
+                <div className="text-xs text-emerald-700 font-medium">Rep Commission (1.0% Exact)</div>
                 <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
-                  Max: Up to 3%
+                  Fixed: 1.0%
                 </span>
               </div>
               <div className="text-2xl font-black text-emerald-900 tabular-nums mt-1">

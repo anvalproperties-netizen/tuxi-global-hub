@@ -219,7 +219,7 @@ export class PaymentIntegrationService {
                 JSON.stringify(verification.rawPayload)
               ]);
 
-              // Accrue Rep commission (<= 3.0%) if business has active Rep attribution
+              // Accrue Rep commission (EXACTLY 1.0% of product subtotal) if business has active Rep attribution
               const repAttributionRes = await client.query(`
                 SELECT rep_profile_id FROM rep_business_attributions
                 WHERE business_id = $1 AND attribution_status = 'APPROVED';
@@ -235,8 +235,16 @@ export class PaymentIntegrationService {
                 `);
                 if (ruleRes.rows.length > 0) {
                   const rule = ruleRes.rows[0];
-                  const rate = Math.min(0.0300, Number(rule.percentage_rate));
-                  const earnedCommissionCents = Math.round(order.total_cents * rate);
+                  const rawRate = Number(rule.percentage_rate);
+                  if (rawRate !== 0.01) {
+                    throw new Error(`INVALID_REP_COMMISSION_POLICY: Rep commission rate must be exactly 0.0100 (1.0%), received ${rawRate}`);
+                  }
+                  const rate = 0.0100;
+                  // Strictly product subtotal cents; excludes delivery fees, tips, and service fees
+                  const qualifyingSubtotalCents = order.subtotal_cents !== undefined 
+                    ? order.subtotal_cents 
+                    : (order.total_cents - (order.delivery_fee_cents || 0) - (order.service_fee_cents || 0) - (order.tip_cents || 0));
+                  const earnedCommissionCents = Math.round(qualifyingSubtotalCents * rate);
                   const commIdempKey = `comm_accrue_${order.id}`;
 
                   await client.query(`
@@ -250,12 +258,12 @@ export class PaymentIntegrationService {
                     repProfileId,
                     order.business_id,
                     order.id,
-                    order.total_cents,
+                    qualifyingSubtotalCents,
                     rule.id,
                     rate,
                     earnedCommissionCents,
                     commIdempKey,
-                    `Earned commission on order #${order.id}`
+                    `Earned 1.0% commission on qualifying product subtotal of order #${order.id}`
                   ]);
                 }
               }

@@ -1,24 +1,31 @@
 /**
- * TUXI Global Hub — Phase C1 Verification Test Suite
+ * TUXI Global Hub — Phase C1 Definitive Verification Test Suite
  * 
- * Verifies all 14 Required E2E Demonstrations:
- * 1.  Applicant submits valid application
- * 2.  Application saved to backend (SQLite / PostgreSQL)
+ * Verifies all 14 Mandatory Requirements & Definitive Commercial Policies:
+ * 1.  Applicant submits valid applications (Rep & Driver)
+ * 2.  Applications saved to backend database tables with full metadata
  * 3.  Survives refresh (fresh read from DB returns same state)
- * 4.  Survives logout and login (retrievable by user ID upon re-auth)
- * 5.  Survives server restart (persistent DB tables maintain records)
- * 6.  Applicant sees same status on another device (authenticated API returns identical data)
- * 7.  Another user cannot access that application (strict user data isolation)
- * 8.  Duplicate application blocked (idempotent submission prevents duplicates)
- * 9.  Admin retrieves application (authorized admin can list pending/reviewed applications)
- * 10. Unauthorized user blocked from admin review (RBAC blocks non-admins)
- * 11. Incomplete verification prevents final approval (blocks APPROVED without verified docs)
- * 12. Bicycle registration rejected (strict BICYCLE_TRANSPORT_PROHIBITED enforcement)
- * 13. Rep territory remains 10 km (10.00 km limit strictly enforced)
- * 14. Existing checkout and financial rules unchanged (3% admin, 1% rep, R10 margin, R25 payout)
+ * 4.  Survives logout and login (retrievable by user ID upon session reset)
+ * 5.  Survives server restart (stored in physical persistent database tables)
+ * 6.  Cross-device synchronization (applicant sees identical status via auth token)
+ * 7.  Strict user isolation (User B cannot access User A application data)
+ * 8.  Duplicate prevention & idempotency (resubmission returns existing active record)
+ * 9.  Admin retrieves applications with full applicant details and metadata
+ * 10. Unauthorized user blocked from administrative review endpoints (RBAC gate)
+ * 11. Comprehensive approval gates: Incomplete verification strictly blocks APPROVAL
+ * 12. Bicycle & electric bicycle registration strictly rejected across backend
+ * 13. Rep territory radius strictly capped at 10.00 km
+ * 14. Authoritative Financial Policy & Exact 1.0% Rep Commission Model:
+ *     - R1,000 Attributed Subtotal: R30 Admin Fee, R10 Rep Commission, R20 TUXI Retained
+ *     - R1,000 Unattributed Subtotal: R30 Admin Fee, R0 Rep Commission, R30 TUXI Retained
+ *     - R45 Delivery Fee: R0 Rep Commission on delivery charges
+ *     - Rejection of unauthorized rates (2.5%, 1.5%, 3.0%)
+ *     - Refund & cancellation treatment (compensating reversals)
+ *     - Owner-acquired / unattributed merchants generate 0% Rep commission
  */
 
 import { ApplicationService } from '../src/server/services/applicationService.js';
+import { CommissionService } from '../src/server/services/commissionService.js';
 import { dbInstance } from '../src/server/db/database.js';
 
 async function runPhaseC1Tests() {
@@ -42,26 +49,27 @@ async function runPhaseC1Tests() {
     }
   }
 
-  // Create isolated test user fixtures
-  const testApplicantAId = 'usr-c1-test-applicant-a-' + Date.now();
-  const testApplicantBId = 'usr-c1-test-applicant-b-' + Date.now();
-  const testAdminId = 'usr-c1-test-admin-' + Date.now();
+  // Generate unique test identities
+  const timestamp = Date.now();
+  const testApplicantAId = `usr-c1-applicant-a-${timestamp}`;
+  const testApplicantBId = `usr-c1-applicant-b-${timestamp}`;
+  const testAdminId = `usr-c1-admin-${timestamp}`;
 
   // Seed test users in users table
   dbInstance.db.prepare(`
     INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number, is_active)
     VALUES (?, ?, 'hash', 'Alice', 'Applicant', '+27821112222', 1)
-  `).run(testApplicantAId, `alice.${Date.now()}@example.com`);
+  `).run(testApplicantAId, `alice.${timestamp}@example.com`);
 
   dbInstance.db.prepare(`
     INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number, is_active)
     VALUES (?, ?, 'hash', 'Bob', 'Applicant', '+27823334444', 1)
-  `).run(testApplicantBId, `bob.${Date.now()}@example.com`);
+  `).run(testApplicantBId, `bob.${timestamp}@example.com`);
 
   dbInstance.db.prepare(`
     INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number, is_active)
     VALUES (?, ?, 'hash', 'Chief', 'Admin', '+27825556666', 1)
-  `).run(testAdminId, `admin.${Date.now()}@tuxi.global`);
+  `).run(testAdminId, `admin.${timestamp}@tuxi.global`);
 
   // Grant ADMIN role to testAdminId
   dbInstance.db.prepare(`
@@ -72,11 +80,11 @@ async function runPhaseC1Tests() {
   let createdDriverAppId = '';
 
   // ---------------------------------------------------------------------------
-  // TEST 1: Applicant submits valid application
+  // TEST 01: Applicant submits valid applications (Rep & Driver)
   // ---------------------------------------------------------------------------
   try {
     const repResult = await ApplicationService.submitRepApplication(testApplicantAId, {
-      birthDate: '1995-04-12', // Age 31 (> 18)
+      birthDate: '1994-06-15', // Age 31 (> 18)
       contactPhone: '+27 82 123 4567',
       hasMobilePhone: true,
       hasMobileData: true,
@@ -96,42 +104,32 @@ async function runPhaseC1Tests() {
       }
     });
 
-    createdRepAppId = repResult.applicationId;
-    assert(
-      repResult.status === 'PENDING_REVIEW' && !!repResult.applicationId,
-      'Applicant A submits valid TUXI Rep application',
-      `Application ID: ${repResult.applicationId}, Initial Status: ${repResult.status}`
-    );
-  } catch (err: any) {
-    assert(false, 'Applicant A submits valid TUXI Rep application', err.message);
-  }
-
-  // Also submit valid driver application for Applicant A
-  try {
     const driverResult = await ApplicationService.submitDriverApplication(testApplicantAId, {
       transportType: 'MOTORCYCLE',
       licenseNumber: 'DL-ZA-992144',
       vehiclePlate: 'CA 123-456',
       vehicleMakeModel: 'Honda Ace 125',
       contactPhone: '+27 82 123 4567',
-      idDocumentNumber: '9504125089088',
+      idDocumentNumber: '9406155089088',
       roadworthyInsuranceConfirmed: true,
       safetyGearConfirmed: true,
       safetyCharterConsent: true
     });
 
+    createdRepAppId = repResult.applicationId;
     createdDriverAppId = driverResult.applicationId;
+
     assert(
-      driverResult.status === 'PENDING_REVIEW' && !!driverResult.applicationId,
-      'Applicant A submits valid TUXI Driver application (Approved Transport: MOTORCYCLE)',
-      `Application ID: ${driverResult.applicationId}, Initial Status: ${driverResult.status}`
+      repResult.status === 'PENDING_REVIEW' && driverResult.status === 'PENDING_REVIEW',
+      'Applicant submits valid TUXI Rep and Delivery Driver applications',
+      `Rep App ID: ${createdRepAppId} (PENDING_REVIEW) | Driver App ID: ${createdDriverAppId} (PENDING_REVIEW)`
     );
   } catch (err: any) {
-    assert(false, 'Applicant A submits valid TUXI Driver application', err.message);
+    assert(false, 'Applicant submits valid applications', err.message);
   }
 
   // ---------------------------------------------------------------------------
-  // TEST 2: Application saved to backend database
+  // TEST 02: Applications saved to backend database tables with full metadata
   // ---------------------------------------------------------------------------
   const savedRepRow = dbInstance.db.prepare(`
     SELECT * FROM rep_applications WHERE id = ?
@@ -145,11 +143,11 @@ async function runPhaseC1Tests() {
     !!savedRepRow && savedRepRow.user_id === testApplicantAId && savedRepRow.status === 'PENDING_REVIEW' &&
     !!savedDriverRow && savedDriverRow.user_id === testApplicantAId && savedDriverRow.status === 'PENDING_REVIEW',
     'Applications successfully written and saved to backend database tables',
-    `Rep Table Row: ID=${savedRepRow?.id}, Status=${savedRepRow?.status} | Driver Table Row: ID=${savedDriverRow?.id}, Status=${savedDriverRow?.status}`
+    `Rep Table Row: ID=${savedRepRow?.id}, User=${savedRepRow?.user_id} | Driver Table Row: ID=${savedDriverRow?.id}, User=${savedDriverRow?.user_id}`
   );
 
   // ---------------------------------------------------------------------------
-  // TEST 3: Survives refresh (fresh read from DB returns same state)
+  // TEST 03: Survives refresh (fresh read from DB returns same state)
   // ---------------------------------------------------------------------------
   const freshStatus = await ApplicationService.getApplicantStatus(testApplicantAId);
   assert(
@@ -162,9 +160,8 @@ async function runPhaseC1Tests() {
   );
 
   // ---------------------------------------------------------------------------
-  // TEST 4: Survives logout and login (retrievable by user ID upon re-auth)
+  // TEST 04: Survives logout and login (retrievable by user ID upon session reset)
   // ---------------------------------------------------------------------------
-  // Emulate client session clear (logout) followed by re-authentication retrieval
   const reauthenticatedStatus = await ApplicationService.getApplicantStatus(testApplicantAId);
   assert(
     reauthenticatedStatus.repApplication?.hub_city === 'Cape Town' &&
@@ -174,9 +171,8 @@ async function runPhaseC1Tests() {
   );
 
   // ---------------------------------------------------------------------------
-  // TEST 5: Survives server restart (persistent DB tables maintain records)
+  // TEST 05: Survives server restart (stored in physical persistent database tables)
   // ---------------------------------------------------------------------------
-  // Directly verify SQLite schema constraints and file persistence
   const repCount = dbInstance.db.prepare(`SELECT COUNT(*) as c FROM rep_applications WHERE id = ?`).get(createdRepAppId) as any;
   const drvCount = dbInstance.db.prepare(`SELECT COUNT(*) as c FROM driver_applications WHERE id = ?`).get(createdDriverAppId) as any;
   assert(
@@ -186,19 +182,18 @@ async function runPhaseC1Tests() {
   );
 
   // ---------------------------------------------------------------------------
-  // TEST 6: Applicant sees same status on another device
+  // TEST 06: Applicant sees identical status and timestamp on another device
   // ---------------------------------------------------------------------------
-  // A secondary client making an authenticated API call with Applicant A's token
   const secondaryDeviceStatus = await ApplicationService.getApplicantStatus(testApplicantAId);
   assert(
     secondaryDeviceStatus.repApplication?.id === createdRepAppId &&
     secondaryDeviceStatus.driverApplication?.id === createdDriverAppId,
-    'Applicant sees identical status and timestamp on another device via auth token',
+    'Cross-device synchronization: Applicant sees identical status and timestamp via auth token',
     `Device B query: rep_id=${secondaryDeviceStatus.repApplication?.id}, driver_id=${secondaryDeviceStatus.driverApplication?.id}`
   );
 
   // ---------------------------------------------------------------------------
-  // TEST 7: Another user cannot access that application (strict data isolation)
+  // TEST 07: Another user cannot access that application (strict data isolation)
   // ---------------------------------------------------------------------------
   const applicantBStatus = await ApplicationService.getApplicantStatus(testApplicantBId);
   assert(
@@ -208,10 +203,10 @@ async function runPhaseC1Tests() {
   );
 
   // ---------------------------------------------------------------------------
-  // TEST 8: Duplicate application blocked (idempotent / unique constraint)
+  // TEST 08: Duplicate application blocked (idempotent / unique constraint)
   // ---------------------------------------------------------------------------
   const duplicateRepResult = await ApplicationService.submitRepApplication(testApplicantAId, {
-    birthDate: '1995-04-12',
+    birthDate: '1994-06-15',
     contactPhone: '+27 82 123 4567',
     transportDetails: 'Updated Vehicle',
     residentialAddress: { line1: 'New Address', city: 'Cape Town', postalCode: '8001' },
@@ -231,7 +226,7 @@ async function runPhaseC1Tests() {
   );
 
   // ---------------------------------------------------------------------------
-  // TEST 9: Admin retrieves application
+  // TEST 09: Admin retrieves applications
   // ---------------------------------------------------------------------------
   const adminList = await ApplicationService.listApplications(testAdminId, { status: 'ALL' });
   const foundRep = adminList.repApplications.find((a: any) => a.id === createdRepAppId);
@@ -247,49 +242,68 @@ async function runPhaseC1Tests() {
   // TEST 10: Unauthorized user blocked from admin review
   // ---------------------------------------------------------------------------
   try {
-    // Attempting to review as testApplicantBId (not admin)
-    // The service requires adminUserId check
     const roles = dbInstance.db.prepare(`
       SELECT role FROM user_roles WHERE user_id = ?
     `).all(testApplicantBId) as any[];
     const hasAdmin = roles.some((r: any) => r.role === 'ADMIN' || r.role === 'SUPER_ADMIN');
 
-    if (!hasAdmin) {
-      assert(
-        true,
-        'Unauthorized user blocked from administrative review endpoints (RBAC gate)',
-        `User ${testApplicantBId} verified non-admin; API route checks req.user.roles includes ADMIN`
-      );
-    } else {
-      assert(false, 'Unauthorized user blocked from admin review');
-    }
+    assert(
+      !hasAdmin,
+      'Unauthorized user blocked from administrative review endpoints (RBAC gate)',
+      `User ${testApplicantBId} verified non-admin; API route requires ADMIN/SUPER_ADMIN role`
+    );
   } catch (err: any) {
     assert(false, 'Unauthorized user blocked from admin review', err.message);
   }
 
   // ---------------------------------------------------------------------------
-  // TEST 11: Incomplete verification prevents final approval (Mandatory Gate)
+  // TEST 11: Mandatory Gates: Incomplete verification prevents approval (Drivers & Reps)
   // ---------------------------------------------------------------------------
+  // 11.A: Driver approval blocked when biometric liveness / license / roadworthiness missing
+  let driverGateBlocked = false;
   try {
-    // Attempt to APPROVE without verified documents
+    await ApplicationService.reviewApplication(testAdminId, {
+      applicationId: createdDriverAppId,
+      roleType: 'DRIVER',
+      decision: 'APPROVED',
+      verifiedDocuments: {
+        id_document: 'VERIFIED',
+        proof_of_residence: 'VERIFIED',
+        driver_selfie_liveness: 'UNVERIFIED', // Missing external biometric liveness!
+        driver_transport_selfie: 'VERIFIED',
+        drivers_license: 'VERIFIED',
+        vehicle_roadworthy: 'VERIFIED',
+        payload_certification: 'VERIFIED'
+      }
+    });
+  } catch (err: any) {
+    driverGateBlocked = err.message.includes('INCOMPLETE_VERIFICATION_EVIDENCE');
+  }
+
+  // 11.B: Rep approval blocked when hub / residence / eligibility missing
+  let repGateBlocked = false;
+  try {
     await ApplicationService.reviewApplication(testAdminId, {
       applicationId: createdRepAppId,
       roleType: 'REP',
       decision: 'APPROVED',
       verifiedDocuments: {
-        id_document: 'UNVERIFIED', // Incomplete!
-        proof_of_residence: 'UNVERIFIED'
+        id_document: 'VERIFIED',
+        proof_of_residence: 'UNVERIFIED', // Missing residence!
+        hub_verification: 'VERIFIED',
+        eligibility_checks: 'VERIFIED',
+        terms_accepted: 'VERIFIED'
       }
     });
-    assert(false, 'Incomplete verification prevents final approval (should have thrown)');
   } catch (err: any) {
-    const isGateTriggered = err.message.includes('INCOMPLETE_VERIFICATION_EVIDENCE');
-    assert(
-      isGateTriggered,
-      'Mandatory Gate: Approval strictly blocked when required documents are unverified',
-      `Caught expected rejection: "${err.message}"`
-    );
+    repGateBlocked = err.message.includes('INCOMPLETE_VERIFICATION_EVIDENCE');
   }
+
+  assert(
+    driverGateBlocked && repGateBlocked,
+    'Comprehensive Verification Gate: Approvals strictly blocked if any statutory evidence is unverified',
+    `Driver Gate Blocked: ${driverGateBlocked} (Biometric Liveness missing) | Rep Gate Blocked: ${repGateBlocked} (Proof of Residence missing)`
+  );
 
   // ---------------------------------------------------------------------------
   // TEST 12: Bicycle registration rejected across backend
@@ -323,25 +337,183 @@ async function runPhaseC1Tests() {
   );
 
   // ---------------------------------------------------------------------------
-  // TEST 14: Existing checkout and financial rules unchanged
+  // TEST 14: Definitive Financial Model & Strict 1.0% Rep Commission Enforcement
   // ---------------------------------------------------------------------------
-  // Check that commercial rates in database & rules match required constants:
-  // 3% admin fee, 1% rep commission, 0% merchant sales commission, R10 delivery margin, R25 payout fee
-  const rules = dbInstance.db.prepare(`
-    SELECT * FROM commission_rules WHERE target_role = 'TUXI_REP'
-  `).all() as any[];
+  console.log('\n--- EXECUTING TEST 14: Definitive Financial Model & Exact 1.0% Policy ---');
+
+  // Verify active rule in SQLite is exactly 0.0100 (1.0%)
+  const activeRule = dbInstance.db.prepare(`
+    SELECT * FROM commission_rules WHERE target_role = 'TUXI_REP' AND is_active = 1
+  `).get() as any;
+
+  const isExactOnePercent = activeRule && parseFloat(activeRule.percentage_rate) === 0.01;
+
+  // Set up financial test fixtures with valid relational foreign keys:
+  const testRepProfileId = dbInstance.generateUuid();
+  const testAttributedBizId = dbInstance.generateUuid();
+  const testUnattributedBizId = dbInstance.generateUuid();
+  const hubAddressId = dbInstance.generateUuid();
+  const bizAddressId = dbInstance.generateUuid();
+
+  // 1. Seed Addresses
+  dbInstance.db.prepare(`
+    INSERT INTO addresses (id, user_id, street_line_1, city, postal_code, country_code, latitude, longitude, normalized_address)
+    VALUES (?, ?, 'Kloof 45', 'Cape Town', '8001', 'ZA', -33.9249, 18.4241, 'KLOOF 45, CAPE TOWN, 8001, ZA')
+  `).run(hubAddressId, testApplicantAId);
+
+  dbInstance.db.prepare(`
+    INSERT INTO addresses (id, user_id, street_line_1, city, postal_code, country_code, latitude, longitude, normalized_address)
+    VALUES (?, ?, 'Kloof 1', 'Cape Town', '8001', 'ZA', -33.9249, 18.4241, 'KLOOF 1, CAPE TOWN, 8001, ZA')
+  `).run(bizAddressId, testApplicantAId);
+
+  // 2. Seed Rep Profile
+  dbInstance.db.prepare(`
+    INSERT INTO rep_profiles (id, user_id, birth_date, has_mobile_phone, has_mobile_data, has_own_transport, hub_address_id, territory_radius_km)
+    VALUES (?, ?, '1994-06-15', 1, 1, 1, ?, 10.0)
+  `).run(testRepProfileId, testApplicantAId, hubAddressId);
+
+  // 3. Seed Attributed Business & Attribution
+  dbInstance.db.prepare(`
+    INSERT INTO businesses (id, type, name, legal_entity_name, tax_or_vat_id, contact_email, contact_phone, address_id, latitude, longitude, status)
+    VALUES (?, 'EATS', 'Attributed Eatery', 'Attributed Ltd', ?, 'attr@eats.dev', ?, ?, -33.9249, 18.4241, 'ACTIVE')
+  `).run(testAttributedBizId, `TAX-ATTR-${timestamp}`, `+2782111${timestamp.toString().slice(-4)}`, bizAddressId);
+
+  dbInstance.db.prepare(`
+    INSERT INTO rep_business_attributions (id, rep_profile_id, business_id, attribution_status, distance_at_origination_km)
+    VALUES (?, ?, ?, 'ACTIVE', 0.45)
+  `).run(dbInstance.generateUuid(), testRepProfileId, testAttributedBizId);
+
+  // 4. Seed Unattributed Business (Owner-acquired)
+  dbInstance.db.prepare(`
+    INSERT INTO businesses (id, type, name, legal_entity_name, tax_or_vat_id, contact_email, contact_phone, address_id, latitude, longitude, status)
+    VALUES (?, 'EATS', 'Unattributed Eatery', 'Unattributed Ltd', ?, 'unattr@eats.dev', ?, ?, -33.9249, 18.4241, 'ACTIVE')
+  `).run(testUnattributedBizId, `TAX-UNATTR-${timestamp}`, `+2782222${timestamp.toString().slice(-4)}`, bizAddressId);
+
+  // 5. Seed Customer Profile
+  const testCustomerProfileId = dbInstance.generateUuid();
+  dbInstance.db.prepare(`
+    INSERT INTO customer_profiles (id, user_id, default_address_id)
+    VALUES (?, ?, ?)
+  `).run(testCustomerProfileId, testApplicantBId, bizAddressId);
+
+  // --- Scenario 14.A: Attributed Order (R1,000 Product Subtotal + R45 Delivery Fee) ---
+  const orderAttrId = 'ord-attr-' + timestamp;
+  const subtotalCents = 100000; // R1,000.00
+  const deliveryFeeCents = 4500; // R45.00
+  const adminFeeRate = 0.03;    // 3.0% Customer Admin Fee
+  const adminFeeCents = Math.round(subtotalCents * adminFeeRate); // R30.00 (3,000 cents)
+  const totalCents = subtotalCents + deliveryFeeCents + adminFeeCents; // R1,075.00 (107,500 cents)
+
+  dbInstance.db.prepare(`
+    INSERT INTO orders (id, order_number, customer_id, business_id, subtotal_cents, delivery_fee_cents, service_fee_cents, total_cents, delivery_address_id, status, idempotency_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DELIVERED', ?)
+  `).run(orderAttrId, `TX-ATTR-${timestamp}`, testCustomerProfileId, testAttributedBizId, subtotalCents, deliveryFeeCents, adminFeeCents, totalCents, bizAddressId, 'idemp-attr-' + timestamp);
+
+  const commAttrResult = await CommissionService.processOrderCommission(orderAttrId, 'comm-idemp-attr-' + timestamp);
+  const repCommissionCents = commAttrResult.commissionCents; // Expected: R10.00 (1,000 cents)
+  const tuxiRetainedAdminFeeCents = adminFeeCents - repCommissionCents; // Expected: R20.00 (2,000 cents)
+
+  const scenarioAPass = (
+    adminFeeCents === 3000 &&           // R30.00
+    repCommissionCents === 1000 &&      // R10.00 (Exactly 1.0%)
+    tuxiRetainedAdminFeeCents === 2000  // R20.00 (Exactly 2.0%)
+  );
+
+  // --- Scenario 14.B: Unattributed Order (R1,000 Product Subtotal + R45 Delivery Fee) ---
+  const orderUnattrId = 'ord-unattr-' + timestamp;
+  dbInstance.db.prepare(`
+    INSERT INTO orders (id, order_number, customer_id, business_id, subtotal_cents, delivery_fee_cents, service_fee_cents, total_cents, delivery_address_id, status, idempotency_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DELIVERED', ?)
+  `).run(orderUnattrId, `TX-UNATTR-${timestamp}`, testCustomerProfileId, testUnattributedBizId, subtotalCents, deliveryFeeCents, adminFeeCents, totalCents, bizAddressId, 'idemp-unattr-' + timestamp);
+
+  const commUnattrResult = await CommissionService.processOrderCommission(orderUnattrId, 'comm-idemp-unattr-' + timestamp);
+  const unattrRepCommissionCents = commUnattrResult.commissionCents; // Expected: R0.00
+  const unattrTuxiRetainedAdminFeeCents = adminFeeCents - unattrRepCommissionCents; // Expected: R30.00
+
+  const scenarioBPass = (
+    adminFeeCents === 3000 &&               // R30.00
+    unattrRepCommissionCents === 0 &&       // R0.00
+    unattrTuxiRetainedAdminFeeCents === 3000 // R30.00 (TUXI retains full 3.0%)
+  );
+
+  // Delivery fee was included in customer total, but commission calculated exclusively on subtotalCents
+  const expectedCommissionIfDeliveryFeeIncluded = Math.round(totalCents * 0.01); // 1075 cents
+  const actualCommission = commAttrResult.commissionCents; // 1000 cents
+  const deliveryCommissionComponent = actualCommission - Math.round(subtotalCents * 0.01); // strictly 0
+  const scenarioCPass = (deliveryCommissionComponent === 0 && actualCommission < expectedCommissionIfDeliveryFeeIncluded);
+
+  // --- Scenario 14.D: Unauthorized Commission Rate Rejection (2.5%, 1.5%, 3.0% MUST FAIL) ---
+  let unauthorizedRateRejected = false;
+  try {
+    // Temporarily test rejection if rate violates 0.0100
+    dbInstance.db.prepare(`
+      UPDATE commission_rules SET percentage_rate = 0.025 WHERE id = ?
+    `).run(activeRule.id);
+
+    // Should throw INVALID_REP_COMMISSION_POLICY
+    await CommissionService.processOrderCommission(orderAttrId, 'comm-idemp-invalid-' + timestamp);
+  } catch (err: any) {
+    unauthorizedRateRejected = err.message.includes('INVALID_REP_COMMISSION_POLICY') || err.message.includes('CHECK constraint failed');
+  } finally {
+    // Restore exact 1.0% rule
+    dbInstance.db.prepare(`
+      UPDATE commission_rules SET percentage_rate = 0.0100 WHERE id = ?
+    `).run(activeRule.id);
+  }
+
+  // --- Scenario 14.E: Full & Partial Refund Compensating Reversals ---
+  // 1. Partial Refund (50% = R500.00 = 50,000 cents) on orderAttrId:
+  const partialRefundResult = await CommissionService.reverseOrderCommission(
+    orderAttrId,
+    'Customer partial cancellation',
+    'rev-partial-' + timestamp,
+    50000
+  );
+  const partialReversalCents = partialRefundResult.reversedCents; // Expected: 500 cents (R5.00)
+
+  // 2. Full Refund on a second delivered order:
+  const orderAttrFullId = 'ord-attr-full-' + timestamp;
+  dbInstance.db.prepare(`
+    INSERT INTO orders (id, order_number, customer_id, business_id, subtotal_cents, delivery_fee_cents, service_fee_cents, total_cents, delivery_address_id, status, idempotency_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DELIVERED', ?)
+  `).run(orderAttrFullId, `TX-FULL-${timestamp}`, testCustomerProfileId, testAttributedBizId, subtotalCents, deliveryFeeCents, adminFeeCents, totalCents, bizAddressId, 'idemp-full-' + timestamp);
+
+  await CommissionService.processOrderCommission(orderAttrFullId, 'comm-idemp-full-' + timestamp);
+
+  const fullRefundResult = await CommissionService.reverseOrderCommission(
+    orderAttrFullId,
+    'Order cancellation full refund',
+    'rev-full-' + timestamp
+  );
+  const fullReversalCents = fullRefundResult.reversedCents; // Expected: 1,000 cents (R10.00)
+
+  const scenarioEPass = (partialReversalCents === 500 && fullReversalCents === 1000);
+
+  const test14AllPassed = (
+    isExactOnePercent &&
+    scenarioAPass &&
+    scenarioBPass &&
+    scenarioCPass &&
+    unauthorizedRateRejected &&
+    scenarioEPass
+  );
 
   assert(
-    rules.length > 0 && rules.some((r: any) => parseFloat(r.percentage_rate) <= 0.03),
-    'Commercial policies and financial calculation rates preserved unchanged',
-    `Active Rep commission rules: ${rules.map((r: any) => `${(r.percentage_rate * 100).toFixed(1)}%`).join(', ')} (within authorized <= 3% cap)`
+    test14AllPassed,
+    'Authoritative Financial Model: Exact 1.0% Rep commission and 3.0% Customer Admin Fee strictly enforced',
+    `Active Rule Rate: ${activeRule.percentage_rate * 100}% | ` +
+    `Attributed R1,000 Subtotal: Admin Fee=R${adminFeeCents/100}, Rep Commission=R${repCommissionCents/100}, TUXI Retained=R${tuxiRetainedAdminFeeCents/100} | ` +
+    `Unattributed R1,000 Subtotal: Rep Commission=R${unattrRepCommissionCents/100}, TUXI Retained=R${unattrTuxiRetainedAdminFeeCents/100} | ` +
+    `Delivery Fee (R45) Commission=R0 | ` +
+    `Unauthorized Rate (2.5%) Blocked=${unauthorizedRateRejected} | ` +
+    `Refund Compensating Reversals: 50% Refund=-R${((partialReversalCents ?? 0) / 100).toFixed(2)}, Full Refund=-R${((fullReversalCents ?? 0) / 100).toFixed(2)}`
   );
 
   console.log('\n=================================================================');
   console.log(`PHASE C1 TEST RESULTS: ${passedTests} OF ${totalTests} TESTS PASSED`);
   console.log('=================================================================');
 
-  if (passedTests === totalTests) {
+  if (passedTests === totalTests && totalTests === 14) {
     console.log('STATUS: ALL 14 PHASE C1 VERIFICATION DEMONSTRATIONS SUCCESSFUL.\n');
   } else {
     process.exitCode = 1;

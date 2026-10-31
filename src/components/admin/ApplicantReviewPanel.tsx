@@ -64,15 +64,27 @@ export const ApplicantReviewPanel: React.FC = () => {
   const [reviewNotes, setReviewNotes] = useState<string>('');
   const [verifiedDocs, setVerifiedDocs] = useState<{
     id_document: boolean;
+    proof_of_residence: boolean;
+    hub_verification: boolean;
+    eligibility_checks: boolean;
+    terms_accepted: boolean;
+    driver_selfie_liveness: boolean;
+    driver_transport_selfie: boolean;
     drivers_license: boolean;
     vehicle_roadworthy: boolean;
-    proof_of_residence: boolean;
+    payload_certification: boolean;
     banking_verification: boolean;
   }>({
     id_document: false,
+    proof_of_residence: false,
+    hub_verification: false,
+    eligibility_checks: false,
+    terms_accepted: false,
+    driver_selfie_liveness: false,
+    driver_transport_selfie: false,
     drivers_license: false,
     vehicle_roadworthy: false,
-    proof_of_residence: false,
+    payload_certification: false,
     banking_verification: false
   });
   const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
@@ -112,16 +124,38 @@ export const ApplicantReviewPanel: React.FC = () => {
 
   const handleOpenReviewModal = (app: ApplicantRecord) => {
     setSelectedApp(app);
-    setReviewDecision('APPROVED');
+    setReviewDecision(app.status === 'APPROVED' ? 'APPROVED' : 'CHANGES_REQUESTED');
     setDecisionReason('');
     setReviewNotes('');
     setVerifiedDocs({
       id_document: app.status === 'APPROVED',
+      proof_of_residence: app.status === 'APPROVED',
+      hub_verification: app.status === 'APPROVED',
+      eligibility_checks: app.status === 'APPROVED',
+      terms_accepted: app.status === 'APPROVED',
+      driver_selfie_liveness: false, // Honest UNVERIFIED until external biometric provider integrated
+      driver_transport_selfie: app.status === 'APPROVED',
       drivers_license: app.status === 'APPROVED',
       vehicle_roadworthy: app.status === 'APPROVED',
-      proof_of_residence: app.status === 'APPROVED',
-      banking_verification: app.status === 'APPROVED'
+      payload_certification: app.status === 'APPROVED',
+      banking_verification: false // Honest UNVERIFIED until banking provider integrated
     });
+  };
+
+  const previewVaultDoc = async (docId?: string) => {
+    if (!docId) return;
+    try {
+      const token = ApiClient.getToken();
+      const res = await fetch(`/api/documents/${docId}/preview`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Document preview failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err: any) {
+      alert(`Unable to preview document: ${err.message}`);
+    }
   };
 
   const handleExecuteReview = async (e: React.FormEvent) => {
@@ -136,15 +170,23 @@ export const ApplicantReviewPanel: React.FC = () => {
       const token = ApiClient.getToken();
       if (!token) throw new Error('UNAUTHENTICATED');
 
-      const verifiedDocumentsPayload: Record<string, string> = {
-        id_document: verifiedDocs.id_document ? 'VERIFIED' : 'UNVERIFIED',
-        proof_of_residence: verifiedDocs.proof_of_residence ? 'VERIFIED' : 'UNVERIFIED'
-      };
-
-      if (activeCategory === 'DRIVER') {
-        verifiedDocumentsPayload.drivers_license = verifiedDocs.drivers_license ? 'VERIFIED' : 'UNVERIFIED';
-        verifiedDocumentsPayload.vehicle_roadworthy = verifiedDocs.vehicle_roadworthy ? 'VERIFIED' : 'UNVERIFIED';
-      }
+      const verifiedDocumentsPayload: Record<string, string> = activeCategory === 'REP' 
+        ? {
+            id_document: verifiedDocs.id_document ? 'VERIFIED' : 'UNVERIFIED',
+            proof_of_residence: verifiedDocs.proof_of_residence ? 'VERIFIED' : 'UNVERIFIED',
+            hub_verification: verifiedDocs.hub_verification ? 'VERIFIED' : 'UNVERIFIED',
+            eligibility_checks: verifiedDocs.eligibility_checks ? 'VERIFIED' : 'UNVERIFIED',
+            terms_accepted: verifiedDocs.terms_accepted ? 'VERIFIED' : 'UNVERIFIED'
+          }
+        : {
+            id_document: verifiedDocs.id_document ? 'VERIFIED' : 'UNVERIFIED',
+            proof_of_residence: verifiedDocs.proof_of_residence ? 'VERIFIED' : 'UNVERIFIED',
+            driver_selfie_liveness: verifiedDocs.driver_selfie_liveness ? 'VERIFIED' : 'UNVERIFIED',
+            driver_transport_selfie: verifiedDocs.driver_transport_selfie ? 'VERIFIED' : 'UNVERIFIED',
+            drivers_license: verifiedDocs.drivers_license ? 'VERIFIED' : 'UNVERIFIED',
+            vehicle_roadworthy: verifiedDocs.vehicle_roadworthy ? 'VERIFIED' : 'UNVERIFIED',
+            payload_certification: verifiedDocs.payload_certification ? 'VERIFIED' : 'UNVERIFIED'
+          };
 
       const res = await fetch(`/api/admin/applications/${selectedApp.id}/review`, {
         method: 'POST',
@@ -413,10 +455,80 @@ export const ApplicantReviewPanel: React.FC = () => {
                 <p>Candidate ID: <span className="font-mono">{selectedApp.id}</span></p>
               </div>
 
+              {/* Decrypted Vault Compliance Documents */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="text-[11px] font-bold text-slate-900 dark:text-white block uppercase tracking-wider">
+                  Vault Compliance Documents (AES-256 Decrypted on Request)
+                </span>
+                <div className="flex flex-wrap gap-1.5 text-[11px]">
+                  {((selectedApp as any).id_document_doc_id || (selectedApp as any).id_document_number) && (
+                    <button
+                      type="button"
+                      onClick={() => previewVaultDoc((selectedApp as any).id_document_doc_id)}
+                      className="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-1"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>National ID</span>
+                    </button>
+                  )}
+                  {(selectedApp as any).proof_of_residence_doc_id && (
+                    <button
+                      type="button"
+                      onClick={() => previewVaultDoc((selectedApp as any).proof_of_residence_doc_id)}
+                      className="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-1"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>Proof of Residence</span>
+                    </button>
+                  )}
+                  {(selectedApp as any).driver_selfie_doc_id && (
+                    <button
+                      type="button"
+                      onClick={() => previewVaultDoc((selectedApp as any).driver_selfie_doc_id)}
+                      className="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-emerald-600 dark:text-emerald-400 font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-1"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>Facial Selfie</span>
+                    </button>
+                  )}
+                  {(selectedApp as any).driver_transport_selfie_doc_id && (
+                    <button
+                      type="button"
+                      onClick={() => previewVaultDoc((selectedApp as any).driver_transport_selfie_doc_id)}
+                      className="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-emerald-600 dark:text-emerald-400 font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-1"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>Transport Photo</span>
+                    </button>
+                  )}
+                  {(selectedApp as any).drivers_license_doc_id && (
+                    <button
+                      type="button"
+                      onClick={() => previewVaultDoc((selectedApp as any).drivers_license_doc_id)}
+                      className="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-emerald-600 dark:text-emerald-400 font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-1"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>Driver License</span>
+                    </button>
+                  )}
+                  {(selectedApp as any).vehicle_roadworthy_doc_id && (
+                    <button
+                      type="button"
+                      onClick={() => previewVaultDoc((selectedApp as any).vehicle_roadworthy_doc_id)}
+                      className="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-emerald-600 dark:text-emerald-400 font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-1"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>Roadworthy &amp; Insurance</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Mandatory Verification Checkboxes */}
               <div className="space-y-2 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
-                <div className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
-                  Statutory Document Verification Checklist
+                <div className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1 flex items-center justify-between">
+                  <span>Statutory Document &amp; Evidence Checklist</span>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">Strict Compliance</span>
                 </div>
                 
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
@@ -426,11 +538,76 @@ export const ApplicantReviewPanel: React.FC = () => {
                     onChange={(e) => setVerifiedDocs(prev => ({ ...prev, id_document: e.target.checked }))}
                     className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                   />
-                  <span>National ID / Passport Verified &amp; Age 18+ Authenticated</span>
+                  <span>1. Verified Government Identity (Passport / National ID) &amp; Age 18+</span>
                 </label>
 
-                {activeCategory === 'DRIVER' && (
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={verifiedDocs.proof_of_residence}
+                    onChange={(e) => setVerifiedDocs(prev => ({ ...prev, proof_of_residence: e.target.checked }))}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span>2. Proof of Residence (Utility Bill / Certified Affidavit)</span>
+                </label>
+
+                {activeCategory === 'REP' ? (
                   <>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={verifiedDocs.hub_verification}
+                        onChange={(e) => setVerifiedDocs(prev => ({ ...prev, hub_verification: e.target.checked }))}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span>3. Home Hub Location &amp; 10 km Exclusive Boundary Verified</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={verifiedDocs.eligibility_checks}
+                        onChange={(e) => setVerifiedDocs(prev => ({ ...prev, eligibility_checks: e.target.checked }))}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span>4. Rep Eligibility Checks (Device, Cellular Data, Transport)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={verifiedDocs.terms_accepted}
+                        onChange={(e) => setVerifiedDocs(prev => ({ ...prev, terms_accepted: e.target.checked }))}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span>5. TUXI Rep Terms &amp; Conditions Version Accepted</span>
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    {/* External Biometric Liveness Check: Honest unverified state when provider unintegrated */}
+                    <div className="flex items-start gap-2 text-xs p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-semibold text-amber-900 dark:text-amber-200">
+                          3. Facial Selfie &amp; Biometric Liveness: <span className="font-mono text-[10px] bg-amber-200 dark:bg-amber-800 px-1 py-0.5 rounded">UNVERIFIED — PROVIDER PENDING</span>
+                        </div>
+                        <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">
+                          External KYC provider (Smile Identity / Persona) not connected in dev. Administrative fabrication of biometric verification is prohibited.
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={verifiedDocs.driver_transport_selfie}
+                        onChange={(e) => setVerifiedDocs(prev => ({ ...prev, driver_transport_selfie: e.target.checked }))}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span>4. Driver-with-Transport Photograph Verified</span>
+                    </label>
+
                     <label className="flex items-center gap-2 text-xs cursor-pointer">
                       <input
                         type="checkbox"
@@ -438,7 +615,7 @@ export const ApplicantReviewPanel: React.FC = () => {
                         onChange={(e) => setVerifiedDocs(prev => ({ ...prev, drivers_license: e.target.checked }))}
                         className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       />
-                      <span>Valid Driving License ({selectedApp.license_number}) Verified</span>
+                      <span>5. Valid Driving License ({selectedApp.license_number}) Verified</span>
                     </label>
 
                     <label className="flex items-center gap-2 text-xs cursor-pointer">
@@ -448,23 +625,31 @@ export const ApplicantReviewPanel: React.FC = () => {
                         onChange={(e) => setVerifiedDocs(prev => ({ ...prev, vehicle_roadworthy: e.target.checked }))}
                         className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       />
-                      <span>Vehicle Roadworthiness &amp; Goods-In-Transit Insurance Verified</span>
+                      <span>6. Vehicle Registration &amp; Roadworthiness Certificate Verified</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={verifiedDocs.payload_certification}
+                        onChange={(e) => setVerifiedDocs(prev => ({ ...prev, payload_certification: e.target.checked }))}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span>7. Transport Category &amp; Commercial Delivery Payload Certified</span>
                     </label>
                   </>
                 )}
 
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={verifiedDocs.proof_of_residence}
-                    onChange={(e) => setVerifiedDocs(prev => ({ ...prev, proof_of_residence: e.target.checked }))}
-                    className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                  />
-                  <span>Proof of Residence &amp; Home Hub Boundary Verified</span>
-                </label>
+                {/* Banking Verification Alert */}
+                <div className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
+                  <span>Banking Details Verification (Mandatory Before Payouts):</span>
+                  <span className="font-mono text-[10px] bg-slate-200 dark:bg-slate-600 px-1.5 py-0.5 rounded font-bold text-slate-700 dark:text-slate-200">
+                    PENDING GATEWAY LINK
+                  </span>
+                </div>
 
-                <p className="text-[10px] text-slate-400 mt-1">
-                  * Final approval is strictly blocked by the backend gate if mandatory verification evidence is unverified.
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 italic">
+                  * Backend approval gate strictly blocks APPROVE unless all statutory evidence items are genuinely verified.
                 </p>
               </div>
 

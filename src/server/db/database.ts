@@ -37,6 +37,10 @@ export class TuxiDatabase {
     return crypto.randomUUID();
   }
 
+  public getDatabase(): DatabaseSync {
+    return this.db;
+  }
+
   private initTables(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -317,6 +321,15 @@ export class TuxiDatabase {
         territory_radius_km REAL NOT NULL DEFAULT 10.0,
         terms_version_id TEXT NOT NULL DEFAULT 'v2.1-rep-terms-2026',
         terms_accepted_at TEXT NOT NULL DEFAULT (datetime('now')),
+        full_legal_name TEXT,
+        id_document_number TEXT,
+        banking_bank_name TEXT,
+        banking_account_number_masked TEXT,
+        banking_branch_code TEXT,
+        banking_account_holder TEXT,
+        banking_verification_status TEXT NOT NULL DEFAULT 'PENDING_VERIFICATION',
+        proof_of_residence_doc_id TEXT,
+        id_document_doc_id TEXT,
         banking_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
         required_documents_status TEXT NOT NULL DEFAULT '{"id_document": "SUBMITTED", "proof_of_residence": "UNVERIFIED", "banking_verification": "UNVERIFIED"}',
         rejection_reason TEXT,
@@ -339,9 +352,22 @@ export class TuxiDatabase {
         vehicle_make_model TEXT NOT NULL,
         contact_phone TEXT NOT NULL,
         id_document_number TEXT NOT NULL,
+        full_legal_name TEXT,
         residential_address_line1 TEXT,
         residential_city TEXT,
         residential_postal_code TEXT,
+        banking_bank_name TEXT,
+        banking_account_number_masked TEXT,
+        banking_branch_code TEXT,
+        banking_account_holder TEXT,
+        banking_verification_status TEXT NOT NULL DEFAULT 'PENDING_VERIFICATION',
+        id_document_doc_id TEXT,
+        proof_of_residence_doc_id TEXT,
+        driver_selfie_doc_id TEXT,
+        driver_transport_selfie_doc_id TEXT,
+        drivers_license_doc_id TEXT,
+        vehicle_roadworthy_doc_id TEXT,
+        payload_cert_doc_id TEXT,
         proof_of_residence_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
         safety_gear_confirmed INTEGER NOT NULL DEFAULT 1,
         background_check_consent INTEGER NOT NULL DEFAULT 1,
@@ -477,6 +503,10 @@ export class TuxiDatabase {
         storage_path TEXT NOT NULL,
         file_mime_type TEXT NOT NULL,
         file_size_bytes INTEGER NOT NULL,
+        original_filename TEXT,
+        sha256_hash TEXT,
+        encryption_iv TEXT,
+        encryption_tag TEXT,
         is_verified INTEGER NOT NULL DEFAULT 0,
         verification_notes TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -626,9 +656,43 @@ export class TuxiDatabase {
     if (!driverCols.has('capacity_certificate_id')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_certificate_id TEXT;");
     if (!driverCols.has('capacity_evidence_doc_url')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_evidence_doc_url TEXT;");
     if (!driverCols.has('capacity_expires_at')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_expires_at TEXT;");
-    if (!driverCols.has('capacity_revoked_at')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_revoked_at TEXT;");
-    if (!driverCols.has('capacity_revocation_reason')) this.db.exec("ALTER TABLE driver_profiles ADD COLUMN capacity_revocation_reason TEXT;");
+    // Defensive PRAGMA migration for documents table (Phase C2 Secure Document Vault)
+    const docCols = new Set((this.db.prepare("PRAGMA table_info(documents);").all() as any[]).map(c => c.name));
+    if (!docCols.has('original_filename')) this.db.exec("ALTER TABLE documents ADD COLUMN original_filename TEXT;");
+    if (!docCols.has('sha256_hash')) this.db.exec("ALTER TABLE documents ADD COLUMN sha256_hash TEXT;");
+    if (!docCols.has('encryption_iv')) this.db.exec("ALTER TABLE documents ADD COLUMN encryption_iv TEXT;");
+    if (!docCols.has('encryption_tag')) this.db.exec("ALTER TABLE documents ADD COLUMN encryption_tag TEXT;");
 
+    // Defensive PRAGMA migration for rep_applications table (Phase C2 Onboarding & Banking)
+    const repAppCols = new Set((this.db.prepare("PRAGMA table_info(rep_applications);").all() as any[]).map(c => c.name));
+    if (!repAppCols.has('full_legal_name')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN full_legal_name TEXT;");
+    if (!repAppCols.has('id_document_number')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN id_document_number TEXT;");
+    if (!repAppCols.has('banking_bank_name')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN banking_bank_name TEXT;");
+    if (!repAppCols.has('banking_account_number_masked')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN banking_account_number_masked TEXT;");
+    if (!repAppCols.has('banking_branch_code')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN banking_branch_code TEXT;");
+    if (!repAppCols.has('banking_account_holder')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN banking_account_holder TEXT;");
+    if (!repAppCols.has('banking_verification_status')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN banking_verification_status TEXT NOT NULL DEFAULT 'PENDING_VERIFICATION';");
+    if (!repAppCols.has('proof_of_residence_doc_id')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN proof_of_residence_doc_id TEXT;");
+    if (!repAppCols.has('id_document_doc_id')) this.db.exec("ALTER TABLE rep_applications ADD COLUMN id_document_doc_id TEXT;");
+
+    // Defensive PRAGMA migration for driver_applications table (Phase C2 Onboarding & Banking)
+    const driverAppCols = new Set((this.db.prepare("PRAGMA table_info(driver_applications);").all() as any[]).map(c => c.name));
+    if (!driverAppCols.has('full_legal_name')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN full_legal_name TEXT;");
+    if (!driverAppCols.has('residential_address_line1')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN residential_address_line1 TEXT;");
+    if (!driverAppCols.has('residential_city')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN residential_city TEXT;");
+    if (!driverAppCols.has('residential_postal_code')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN residential_postal_code TEXT;");
+    if (!driverAppCols.has('banking_bank_name')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN banking_bank_name TEXT;");
+    if (!driverAppCols.has('banking_account_number_masked')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN banking_account_number_masked TEXT;");
+    if (!driverAppCols.has('banking_branch_code')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN banking_branch_code TEXT;");
+    if (!driverAppCols.has('banking_account_holder')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN banking_account_holder TEXT;");
+    if (!driverAppCols.has('banking_verification_status')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN banking_verification_status TEXT NOT NULL DEFAULT 'PENDING_VERIFICATION';");
+    if (!driverAppCols.has('id_document_doc_id')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN id_document_doc_id TEXT;");
+    if (!driverAppCols.has('proof_of_residence_doc_id')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN proof_of_residence_doc_id TEXT;");
+    if (!driverAppCols.has('driver_selfie_doc_id')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN driver_selfie_doc_id TEXT;");
+    if (!driverAppCols.has('driver_transport_selfie_doc_id')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN driver_transport_selfie_doc_id TEXT;");
+    if (!driverAppCols.has('drivers_license_doc_id')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN drivers_license_doc_id TEXT;");
+    if (!driverAppCols.has('vehicle_roadworthy_doc_id')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN vehicle_roadworthy_doc_id TEXT;");
+    if (!driverAppCols.has('payload_cert_doc_id')) this.db.exec("ALTER TABLE driver_applications ADD COLUMN payload_cert_doc_id TEXT;");
 
     // Seed default current terms version for TUXI Rep if not exists
     const existingTerms = this.db.prepare("SELECT id FROM terms_versions WHERE target_role = 'TUXI_REP' AND is_current = 1").get();

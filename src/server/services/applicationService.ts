@@ -8,6 +8,8 @@ export type ApplicationStatus = 'DRAFT' | 'PENDING_REVIEW' | 'CHANGES_REQUESTED'
 export type VerificationDocumentStatus = 'UNVERIFIED' | 'SUBMITTED' | 'PENDING_REVIEW' | 'VERIFIED' | 'FAILED' | 'REJECTED';
 
 export interface SubmitRepApplicationInput {
+  fullLegalName?: string;
+  idDocumentNumber?: string;
   birthDate: string; // YYYY-MM-DD
   contactPhone: string;
   hasMobilePhone?: boolean;
@@ -27,10 +29,19 @@ export interface SubmitRepApplicationInput {
     latitude: number;
     longitude: number;
   };
+  bankingDetails?: {
+    bankName: string;
+    accountNumberMasked: string;
+    branchCode: string;
+    accountHolder: string;
+  };
+  proofOfResidenceDocId?: string;
+  idDocumentDocId?: string;
   termsVersionId?: string;
 }
 
 export interface SubmitDriverApplicationInput {
+  fullLegalName?: string;
   transportType: string; // 'MOTORCYCLE' | 'CAR' | 'BAKKIE' | 'LIGHT_TRUCK'
   licenseNumber: string;
   vehiclePlate: string;
@@ -42,6 +53,19 @@ export interface SubmitDriverApplicationInput {
     city: string;
     postalCode: string;
   };
+  bankingDetails?: {
+    bankName: string;
+    accountNumberMasked: string;
+    branchCode: string;
+    accountHolder: string;
+  };
+  idDocumentDocId?: string;
+  proofOfResidenceDocId?: string;
+  driverSelfieDocId?: string;
+  driverTransportSelfieDocId?: string;
+  driversLicenseDocId?: string;
+  vehicleRoadworthyDocId?: string;
+  payloadCertDocId?: string;
   safetyGearConfirmed?: boolean;
   backgroundCheckConsent?: boolean;
   safetyCharterConsent?: boolean;
@@ -212,9 +236,12 @@ export class ApplicationService {
           proof_of_residence_status, hub_street_line1, hub_city, hub_postal_code,
           hub_latitude, hub_longitude, territory_radius_km,
           terms_version_id, terms_accepted_at, banking_status,
+          full_legal_name, id_document_number, banking_bank_name,
+          banking_account_number_masked, banking_branch_code, banking_account_holder,
+          banking_verification_status, proof_of_residence_doc_id, id_document_doc_id,
           submitted_at, created_at, updated_at
         )
-        VALUES (?, ?, 'PENDING_REVIEW', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'UNVERIFIED', ?, ?, ?, ?, ?, ?, ?, datetime('now'), 'UNVERIFIED', datetime('now'), datetime('now'), datetime('now'))
+        VALUES (?, ?, 'PENDING_REVIEW', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'UNVERIFIED', ?, ?, ?, ?, ?, ?, ?, datetime('now'), 'UNVERIFIED', ?, ?, ?, ?, ?, ?, 'PENDING_VERIFICATION', ?, ?, datetime('now'), datetime('now'), datetime('now'))
         ON CONFLICT(user_id) DO UPDATE SET
           status = 'PENDING_REVIEW',
           birth_date = excluded.birth_date,
@@ -228,6 +255,15 @@ export class ApplicationService {
           hub_postal_code = excluded.hub_postal_code,
           hub_latitude = excluded.hub_latitude,
           hub_longitude = excluded.hub_longitude,
+          full_legal_name = excluded.full_legal_name,
+          id_document_number = excluded.id_document_number,
+          banking_bank_name = excluded.banking_bank_name,
+          banking_account_number_masked = excluded.banking_account_number_masked,
+          banking_branch_code = excluded.banking_branch_code,
+          banking_account_holder = excluded.banking_account_holder,
+          banking_verification_status = 'PENDING_VERIFICATION',
+          proof_of_residence_doc_id = excluded.proof_of_residence_doc_id,
+          id_document_doc_id = excluded.id_document_doc_id,
           rejection_reason = NULL,
           submitted_at = datetime('now'),
           updated_at = datetime('now');
@@ -237,7 +273,15 @@ export class ApplicationService {
         input.residentialAddress.line1, input.residentialAddress.city, input.residentialAddress.postalCode, input.residentialAddress.country || 'ZA',
         input.hubAddress.line1, input.hubAddress.city, input.hubAddress.postalCode,
         input.hubAddress.latitude, input.hubAddress.longitude, territoryRadiusKm,
-        input.termsVersionId || 'v2.1-rep-terms-2026'
+        input.termsVersionId || 'v2026.1',
+        input.fullLegalName || null,
+        input.idDocumentNumber || null,
+        input.bankingDetails?.bankName || null,
+        input.bankingDetails?.accountNumberMasked || null,
+        input.bankingDetails?.branchCode || null,
+        input.bankingDetails?.accountHolder || null,
+        input.proofOfResidenceDocId || null,
+        input.idDocumentDocId || null
       );
 
       dbInstance.db.prepare(`
@@ -413,6 +457,11 @@ export class ApplicationService {
           safety_gear_confirmed, background_check_consent, safety_charter_consent,
           roadworthy_insurance_confirmed, proof_of_residence_status, facial_liveness_status,
           transport_selfie_status, vehicle_documents_status, banking_status,
+          full_legal_name, banking_bank_name, banking_account_number_masked,
+          banking_branch_code, banking_account_holder, banking_verification_status,
+          id_document_doc_id, proof_of_residence_doc_id, driver_selfie_doc_id,
+          driver_transport_selfie_doc_id, drivers_license_doc_id, vehicle_roadworthy_doc_id,
+          payload_cert_doc_id,
           submitted_at, created_at, updated_at
         )
         VALUES (
@@ -422,6 +471,11 @@ export class ApplicationService {
           ?, ?, ?,
           ?, 'UNVERIFIED', 'UNVERIFIED',
           'UNVERIFIED', 'PENDING_REVIEW', 'UNVERIFIED',
+          ?, ?, ?,
+          ?, ?, 'PENDING_VERIFICATION',
+          ?, ?, ?,
+          ?, ?, ?,
+          ?,
           datetime('now'), datetime('now'), datetime('now')
         )
         ON CONFLICT(user_id) DO UPDATE SET
@@ -432,6 +486,22 @@ export class ApplicationService {
           vehicle_make_model = excluded.vehicle_make_model,
           contact_phone = excluded.contact_phone,
           id_document_number = excluded.id_document_number,
+          residential_address_line1 = excluded.residential_address_line1,
+          residential_city = excluded.residential_city,
+          residential_postal_code = excluded.residential_postal_code,
+          full_legal_name = excluded.full_legal_name,
+          banking_bank_name = excluded.banking_bank_name,
+          banking_account_number_masked = excluded.banking_account_number_masked,
+          banking_branch_code = excluded.banking_branch_code,
+          banking_account_holder = excluded.banking_account_holder,
+          banking_verification_status = 'PENDING_VERIFICATION',
+          id_document_doc_id = excluded.id_document_doc_id,
+          proof_of_residence_doc_id = excluded.proof_of_residence_doc_id,
+          driver_selfie_doc_id = excluded.driver_selfie_doc_id,
+          driver_transport_selfie_doc_id = excluded.driver_transport_selfie_doc_id,
+          drivers_license_doc_id = excluded.drivers_license_doc_id,
+          vehicle_roadworthy_doc_id = excluded.vehicle_roadworthy_doc_id,
+          payload_cert_doc_id = excluded.payload_cert_doc_id,
           rejection_reason = NULL,
           submitted_at = datetime('now'),
           updated_at = datetime('now');
@@ -440,7 +510,19 @@ export class ApplicationService {
         input.vehicleMakeModel.trim(), input.contactPhone.trim(), input.idDocumentNumber.trim(),
         input.residentialAddress?.line1 || null, input.residentialAddress?.city || null, input.residentialAddress?.postalCode || null,
         input.safetyGearConfirmed !== false ? 1 : 0, input.backgroundCheckConsent !== false ? 1 : 0, input.safetyCharterConsent !== false ? 1 : 0,
-        input.roadworthyInsuranceConfirmed !== false ? 1 : 0
+        input.roadworthyInsuranceConfirmed !== false ? 1 : 0,
+        input.fullLegalName || null,
+        input.bankingDetails?.bankName || null,
+        input.bankingDetails?.accountNumberMasked || null,
+        input.bankingDetails?.branchCode || null,
+        input.bankingDetails?.accountHolder || null,
+        input.idDocumentDocId || null,
+        input.proofOfResidenceDocId || null,
+        input.driverSelfieDocId || null,
+        input.driverTransportSelfieDocId || null,
+        input.driversLicenseDocId || null,
+        input.vehicleRoadworthyDocId || null,
+        input.payloadCertDocId || null
       );
 
       dbInstance.db.prepare(`
@@ -489,12 +571,23 @@ export class ApplicationService {
 
     // SQLite Fallback
     const repApp = dbInstance.db.prepare(`
-      SELECT id, status, hub_street_line1, hub_city, transport_details, territory_radius_km, rejection_reason, review_notes, submitted_at, updated_at
+      SELECT id, user_id, status, full_legal_name, id_document_number, birth_date, contact_phone,
+             hub_street_line1, hub_city, hub_postal_code, transport_details, territory_radius_km,
+             banking_bank_name, banking_account_number_masked, banking_branch_code, banking_account_holder,
+             banking_verification_status, proof_of_residence_doc_id, id_document_doc_id,
+             proof_of_residence_status, rejection_reason, review_notes, submitted_at, updated_at
       FROM rep_applications WHERE user_id = ?;
     `).get(userId) as any;
 
     const drvApp = dbInstance.db.prepare(`
-      SELECT id, status, transport_type, vehicle_plate, vehicle_make_model, license_number, rejection_reason, review_notes, submitted_at, updated_at
+      SELECT id, user_id, status, full_legal_name, transport_type, vehicle_plate, vehicle_make_model,
+             license_number, contact_phone, id_document_number, residential_address_line1, residential_city,
+             banking_bank_name, banking_account_number_masked, banking_branch_code, banking_account_holder,
+             banking_verification_status, id_document_doc_id, proof_of_residence_doc_id,
+             driver_selfie_doc_id, driver_transport_selfie_doc_id, drivers_license_doc_id,
+             vehicle_roadworthy_doc_id, payload_cert_doc_id, facial_liveness_status,
+             transport_selfie_status, proof_of_residence_status, vehicle_documents_status,
+             rejection_reason, review_notes, submitted_at, updated_at
       FROM driver_applications WHERE user_id = ?;
     `).get(userId) as any;
 
@@ -572,21 +665,30 @@ export class ApplicationService {
     const table = input.roleType === 'REP' ? 'rep_applications' : 'driver_applications';
     const roleToGrant = input.roleType === 'REP' ? 'TUXI_REP' : 'TUXI_DELIVERY_DRIVER';
 
-    // Gate: Verification completeness check on APPROVAL
+    // Gate: Comprehensive verification completeness check on APPROVAL
     if (input.decision === 'APPROVED') {
       const docs = input.verifiedDocuments || {};
       if (input.roleType === 'REP') {
         const idVerified = docs.id_document === 'VERIFIED';
         const residenceVerified = docs.proof_of_residence === 'VERIFIED';
-        if (!idVerified || !residenceVerified) {
-          throw new Error('INCOMPLETE_VERIFICATION_EVIDENCE: Cannot approve Rep application until National ID and Proof of Residence are verified by compliance officer.');
+        const hubVerified = docs.hub_verification === 'VERIFIED';
+        const eligibilityVerified = docs.eligibility_checks === 'VERIFIED';
+        const termsVerified = docs.terms_accepted === 'VERIFIED';
+
+        if (!idVerified || !residenceVerified || !hubVerified || !eligibilityVerified || !termsVerified) {
+          throw new Error('INCOMPLETE_VERIFICATION_EVIDENCE: Cannot approve Rep application. All applicable verification evidence is mandatory: Verified Government ID (Age 18+), Proof of Residence, Verified Home Hub (10 km Territory), Required Eligibility Checks, and Terms Acceptance.');
         }
       } else {
         const idVerified = docs.id_document === 'VERIFIED';
+        const residenceVerified = docs.proof_of_residence === 'VERIFIED';
+        const livenessVerified = docs.driver_selfie_liveness === 'VERIFIED';
+        const transportSelfieVerified = docs.driver_transport_selfie === 'VERIFIED';
         const licenseVerified = docs.drivers_license === 'VERIFIED';
         const roadworthyVerified = docs.vehicle_roadworthy === 'VERIFIED';
-        if (!idVerified || !licenseVerified || !roadworthyVerified) {
-          throw new Error('INCOMPLETE_VERIFICATION_EVIDENCE: Cannot approve Driver application until National ID, Driver License, and Vehicle Roadworthiness are verified.');
+        const payloadVerified = docs.payload_certification === 'VERIFIED';
+
+        if (!idVerified || !residenceVerified || !livenessVerified || !transportSelfieVerified || !licenseVerified || !roadworthyVerified || !payloadVerified) {
+          throw new Error('INCOMPLETE_VERIFICATION_EVIDENCE: Cannot approve Driver application. All applicable verification evidence is mandatory: Verified Government ID, Proof of Residence, Facial Selfie & Genuine Liveness, Driver-with-Transport Photo, Valid Driving License, Vehicle Roadworthiness & Insurance, and Applicable Payload Certification.');
         }
       }
     }

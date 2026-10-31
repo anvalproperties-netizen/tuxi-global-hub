@@ -549,7 +549,7 @@ export interface PlatformConfig {
   territoryStrictEnforcement: true;
   repDefaultRadiusKm: number; // Strictly 10 km
   repAcquisitionBounty: number; // e.g. $150 or £150
-  repRevSharePercent: number; // 1.5%
+  repRevSharePercent: number; // 1.0% exact on eligible Rep-attributed product subtotal
   activeCityId: string;
   activeCityName: string;
   activeCountry: string;
@@ -609,26 +609,63 @@ export interface PreviouslyViewedItem {
   viewedAt: string;
 }
 
-// Rep & Driver Application States
+// Rep & Driver Application States (Phase C2 Secure Onboarding & Banking)
 export interface RepApplicationState {
   id?: string;
   status: 'NONE' | 'DRAFT' | 'PENDING' | 'PENDING_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'REJECTED';
+  full_legal_name?: string;
+  id_document_number?: string;
   submittedAt?: string;
   hubAddress?: string;
+  hub_street_line1?: string;
+  hub_city?: string;
+  hub_postal_code?: string;
   transportDetails?: string;
-  territoryRadiusKm: number; // strictly 10.0
+  territoryRadiusKm?: number; // strictly 10.0
+  banking_bank_name?: string;
+  banking_account_number_masked?: string;
+  banking_branch_code?: string;
+  banking_account_holder?: string;
+  banking_verification_status?: string;
+  proof_of_residence_doc_id?: string;
+  id_document_doc_id?: string;
+  proof_of_residence_status?: string;
   rejectionReason?: string;
+  rejection_reason?: string;
   reviewNotes?: string;
+  review_notes?: string;
 }
 
 export interface DriverApplicationState {
   id?: string;
   status: 'NONE' | 'DRAFT' | 'PENDING' | 'PENDING_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'REJECTED';
+  full_legal_name?: string;
   submittedAt?: string;
   transportType?: 'motorcycle' | 'car' | 'bakkie' | 'light_truck' | 'MOTORCYCLE' | 'CAR' | 'BAKKIE' | 'LIGHT_TRUCK';
+  transport_type?: string;
   vehiclePlate?: string;
+  vehicle_plate?: string;
   licenseNumber?: string;
+  license_number?: string;
+  banking_bank_name?: string;
+  banking_account_number_masked?: string;
+  banking_branch_code?: string;
+  banking_account_holder?: string;
+  banking_verification_status?: string;
+  id_document_doc_id?: string;
+  proof_of_residence_doc_id?: string;
+  driver_selfie_doc_id?: string;
+  driver_transport_selfie_doc_id?: string;
+  drivers_license_doc_id?: string;
+  vehicle_roadworthy_doc_id?: string;
+  payload_cert_doc_id?: string;
+  facial_liveness_status?: string;
+  transport_selfie_status?: string;
+  proof_of_residence_status?: string;
+  vehicle_documents_status?: string;
   rejectionReason?: string;
+  rejection_reason?: string;
   reviewNotes?: string;
+  review_notes?: string;
 }
 
